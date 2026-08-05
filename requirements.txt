@@ -7,3 +7,4 @@ torch
 matplotlib
 seaborn
 scikit-learn
+tqdm

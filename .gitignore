@@ -1,18 +1,32 @@
-.conda/
+# OS / editor
+.DS_Store
+.idea/
 .vscode/
-.git
+
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+.ipynb_checkpoints/
+.ipycache__/
+
+# Envs
+.venv/
+venv/
 /envs/
-/venv/
 .conda/
 .micromamba/
 .conda_history
 .mamba_history
+
+# Shell history dumps
 .bash_history
 .zsh_history
-.idea/
-.ipycache__/
-.ipynb_checkpoints/
 
+# Local experiment outputs (keep committed figures/ as-is)
+*.npy
+*.npz
+*.h5
