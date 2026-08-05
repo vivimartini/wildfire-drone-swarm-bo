@@ -33,6 +33,7 @@ This project studies how a small swarm of retardant-dropping drones can be sched
 Requires Python 3.9+.
 
 ```bash
+git clone https://github.com/vivimartini/wildfire-drone-swarm-bo.git
 cd wildfire-drone-swarm-bo
 
 python -m venv .venv
