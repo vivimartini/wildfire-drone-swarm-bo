@@ -133,6 +133,8 @@ class RetardantDropBayesOptSR:
         n_sims: int,
         fire_boundary_probability: float = 0.25,
         search_grid_evolution_time_s: float | None = None,
+        risk_measure: str = "cvar",
+        cvar_alpha: float = 0.90,
         rng=None,
     ):
         self.fire_model = fire_model
@@ -144,6 +146,13 @@ class RetardantDropBayesOptSR:
         self.n_sims = int(n_sims)
         self.p_boundary = float(fire_boundary_probability)
         self.search_grid_evolution_time_s = search_grid_evolution_time_s
+
+        self.risk_measure = str(risk_measure).lower().strip()
+        if self.risk_measure not in {"mean", "cvar"}:
+            raise ValueError("risk_measure must be 'mean' or 'cvar'")
+        self.cvar_alpha = float(cvar_alpha)
+        if not 0.0 < self.cvar_alpha < 1.0:
+            raise ValueError("cvar_alpha must lie strictly between 0 and 1")
 
         self.rng = default_rng() if rng is None else rng
 
@@ -233,6 +242,7 @@ class RetardantDropBayesOptSR:
         fire_model_override: CAFireModel | None = None,
         init_firestate_override: FireState | None = None,
         scale_params_to_override: bool = False,
+        return_batch: bool = False,
     ) -> FireState:
         fm = self.fire_model if fire_model_override is None else fire_model_override
         fs = self.init_firestate if init_firestate_override is None else init_firestate_override
@@ -255,6 +265,7 @@ class RetardantDropBayesOptSR:
             seed=seed,
             avoid_burning_drop=fm.env.avoid_burning_drop,
             burning_prob_threshold=fm.env.avoid_drop_p_threshold,
+            return_batch=return_batch,
         )
 
     def _expected_value_from_firestate(self, evolved_firestate: FireState, env_override: CAFireModel | None = None) -> float:
@@ -267,6 +278,70 @@ class RetardantDropBayesOptSR:
         dx = env.domain_km / nx
         expected_value_burned = np.sum(p_affected * env.value) * (dx ** 2)
         return float(expected_value_burned)
+
+    @staticmethod
+    def _losses_from_batch_firestate(batch_firestate: FireState, env) -> np.ndarray:
+        """Return asset-value loss for every unaggregated fire realisation."""
+        burning = np.asarray(batch_firestate.burning)
+        burned = np.asarray(batch_firestate.burned)
+        if burning.ndim != 3 or burning.dtype != bool or burned.dtype != bool:
+            raise ValueError(
+                "expected an unaggregated boolean ensemble of shape (n_sims, nx, ny); "
+                "call simulate_from_firestate(..., return_batch=True)"
+            )
+        affected = np.logical_or(burning, burned)
+        nx, _ = env.grid_size
+        dx = env.domain_km / nx
+        return np.tensordot(affected.astype(float), env.value, axes=([1, 2], [0, 1])) * (dx ** 2)
+
+    @staticmethod
+    def cvar(losses: np.ndarray, alpha: float) -> float:
+        """Empirical upper-tail CVaR: mean loss in the worst (1-alpha) fraction."""
+        losses = np.asarray(losses, dtype=float).ravel()
+        if losses.size == 0:
+            raise ValueError("empty loss vector")
+        alpha = float(alpha)
+        if not 0.0 < alpha < 1.0:
+            raise ValueError("alpha must lie strictly between 0 and 1")
+        k = int(np.clip(np.ceil((1.0 - alpha) * losses.size), 1, losses.size))
+        return float(np.partition(losses, losses.size - k)[-k:].mean())
+
+    def risk_value_burned_area(
+        self,
+        theta: np.ndarray,
+        *,
+        seed: int | None = None,
+        fidelity: str = "high",
+        alpha: float | None = None,
+        return_losses: bool = False,
+        **fidelity_kwargs,
+    ):
+        """Evaluate CVaR on the unaggregated Monte-Carlo loss distribution."""
+        alpha = self.cvar_alpha if alpha is None else float(alpha)
+        drone_params = self.decode_theta(theta)
+        n_sims, evo_time, fm_override, fs_override, scale_params = self._resolve_fidelity(
+            fidelity, **fidelity_kwargs
+        )
+        batch = self._simulate_firestate_with_params(
+            drone_params,
+            n_sims=n_sims,
+            evolution_time_s=evo_time,
+            seed=seed,
+            fire_model_override=fm_override,
+            init_firestate_override=fs_override,
+            scale_params_to_override=scale_params,
+            return_batch=True,
+        )
+        env = fm_override.env if fm_override is not None else self.fire_model.env
+        losses = self._losses_from_batch_firestate(batch, env)
+        value = self.cvar(losses, alpha)
+        return (value, losses) if return_losses else value
+
+    def objective_value(self, theta: np.ndarray, **kwargs) -> float:
+        """Objective minimised by both single- and multi-fidelity BO."""
+        if self.risk_measure == "cvar":
+            return float(self.risk_value_burned_area(theta, **kwargs))
+        return float(self.expected_value_burned_area(theta, **kwargs))
 
     def generate_search_grid(self, K: int = 500, boundary_field: str = "affected"):
         if self.search_grid_evolution_time_s is not None:
@@ -440,6 +515,47 @@ class RetardantDropBayesOptSR:
             delta = float(theta[3 * d + 2]) * (2.0 * np.pi)
             feats.extend([s, r, np.sin(delta), np.cos(delta)])
         return np.asarray(feats, dtype=float)
+
+    def theta_to_wind_gp_features(self, theta: np.ndarray) -> np.ndarray:
+        """Rotate drop locations and orientations into the observed mean-wind frame.
+
+        Each drone contributes [along-wind, cross-wind, sin(relative angle),
+        cos(relative angle)]. Separate kernel lengthscales on these axes therefore
+        encode anisotropy explicitly tied to wind direction.
+        """
+        params = self.decode_theta(theta)
+        wind = self._estimate_mean_wind()
+        if np.linalg.norm(wind) <= 1e-12:
+            wind = np.array([1.0, 0.0])
+        along = self._unit(wind)
+        cross = np.array([-along[1], along[0]])
+        nx, ny = self.fire_model.env.grid_size
+        scale = float(max(nx, ny, 1))
+        centre = np.array([0.5 * nx, 0.5 * ny])
+        wind_angle = float(np.arctan2(along[1], along[0]))
+
+        feats = []
+        for x, y, phi in params:
+            centred = (np.array([x, y]) - centre) / scale
+            long_axis_angle = 0.5 * np.pi - float(phi)
+            relative_angle = long_axis_angle - wind_angle
+            feats.extend(
+                [
+                    float(centred @ along),
+                    float(centred @ cross),
+                    float(np.sin(relative_angle)),
+                    float(np.cos(relative_angle)),
+                ]
+            )
+        return np.asarray(feats, dtype=float)
+
+    def _gp_features(self, theta: np.ndarray, kernel_frame: str) -> np.ndarray:
+        frame = str(kernel_frame).lower().strip()
+        if frame == "wind":
+            return self.theta_to_wind_gp_features(theta)
+        if frame == "sr":
+            return self.theta_to_gp_features(theta)
+        raise ValueError("kernel_frame must be 'wind' or 'sr'")
 
     @staticmethod
     def _sr_arc_length(boundary_xy: np.ndarray) -> np.ndarray:
@@ -1017,6 +1133,29 @@ class RetardantDropBayesOptSR:
         order = self.rng.permutation(X.shape[0])
         return X[order]
 
+    def _resolve_fidelity(
+        self,
+        fidelity: str = "high",
+        *,
+        low_n_sims: int | None = None,
+        low_evolution_time_s: float | None = None,
+        low_fire_model: CAFireModel | None = None,
+        low_init_firestate: FireState | None = None,
+        low_scale_params: bool = False,
+    ):
+        fidelity = str(fidelity).lower().strip()
+        if fidelity not in {"high", "low"}:
+            raise ValueError("fidelity must be 'high' or 'low'")
+        if fidelity == "high":
+            return self.n_sims, self.evolution_time_s, None, None, False
+        return (
+            self.n_sims if low_n_sims is None else int(max(low_n_sims, 1)),
+            self.evolution_time_s if low_evolution_time_s is None else float(low_evolution_time_s),
+            low_fire_model,
+            low_init_firestate,
+            bool(low_scale_params),
+        )
+
     def expected_value_burned_area(
         self,
         theta: np.ndarray,
@@ -1030,22 +1169,14 @@ class RetardantDropBayesOptSR:
         low_scale_params: bool = False,
     ) -> float:
         drone_params = self.decode_theta(theta)
-        fidelity = str(fidelity).lower().strip()
-        if fidelity not in {"high", "low"}:
-            raise ValueError("fidelity must be 'high' or 'low'")
-
-        if fidelity == "high":
-            n_sims = self.n_sims
-            evo_time = self.evolution_time_s
-            fm_override = None
-            fs_override = None
-            scale_params = False
-        else:
-            n_sims = self.n_sims if low_n_sims is None else int(max(low_n_sims, 1))
-            evo_time = self.evolution_time_s if low_evolution_time_s is None else float(low_evolution_time_s)
-            fm_override = low_fire_model
-            fs_override = low_init_firestate
-            scale_params = bool(low_scale_params)
+        n_sims, evo_time, fm_override, fs_override, scale_params = self._resolve_fidelity(
+            fidelity,
+            low_n_sims=low_n_sims,
+            low_evolution_time_s=low_evolution_time_s,
+            low_fire_model=low_fire_model,
+            low_init_firestate=low_init_firestate,
+            low_scale_params=low_scale_params,
+        )
 
         evolved_firestate = self._simulate_firestate_with_params(
             drone_params,
@@ -1213,6 +1344,7 @@ class RetardantDropBayesOptSR:
         verbose: bool = True,
         print_every: int = 1,
         use_ard_kernel: bool = False,
+        kernel_frame: str = "wind",
         init_strategy: str = "random",  # "random", "random_mask", "heuristic"
         init_heuristic_random_frac: float = 0.2,
         init_heuristic_kwargs: dict | None = None,
@@ -1264,6 +1396,7 @@ class RetardantDropBayesOptSR:
                 verbose=verbose,
                 print_every=print_every,
                 use_ard_kernel=use_ard_kernel,
+                kernel_frame=kernel_frame,
                 init_strategy=init_strategy,
                 init_heuristic_random_frac=init_heuristic_random_frac,
                 init_heuristic_kwargs=init_heuristic_kwargs,
@@ -1348,17 +1481,28 @@ class RetardantDropBayesOptSR:
             raise ValueError("Unknown init strategy. Use 'random', 'random_mask', or 'heuristic'.")
 
         X_theta = np.atleast_2d(X_theta)
-        y = np.array([self.expected_value_burned_area(th, seed=eval_seed) for th in X_theta], dtype=float)
-        X = np.vstack([self.theta_to_gp_features(th) for th in X_theta])
+        y = np.array([self.objective_value(th, seed=eval_seed) for th in X_theta], dtype=float)
+        X = np.vstack([self._gp_features(th, kernel_frame) for th in X_theta])
 
         if verbose:
             best0 = float(np.min(y))
             print(f"[BO SR] init: n_init={n_init}, dim={self.dim}")
             print(f"[BO SR] init: best_y={best0:.6g}, mean_y={float(np.mean(y)):.6g}, std_y={float(np.std(y)):.6g}")
 
+        kernel_frame = str(kernel_frame).lower().strip()
+        if kernel_frame not in {"wind", "sr"}:
+            raise ValueError("kernel_frame must be 'wind' or 'sr'")
         if use_ard_kernel:
             base_kernel = Matern(
                 length_scale=np.ones(X.shape[1], dtype=float),
+                nu=2.5,
+                length_scale_bounds=(1e-3, 1e3),
+            )
+        elif kernel_frame == "wind":
+            # Distinct along-/cross-wind scales make the covariance anisotropic;
+            # the feature rotation above ties those axes to the observed wind.
+            base_kernel = Matern(
+                length_scale=np.tile([0.35, 0.15, 0.5, 0.5], self.n_drones),
                 nu=2.5,
                 length_scale_bounds=(1e-3, 1e3),
             )
@@ -1375,7 +1519,7 @@ class RetardantDropBayesOptSR:
             kernel=kernel,
             normalize_y=True,
             n_restarts_optimizer=2,
-            random_state=None,
+            random_state=0,
         )
 
         y_nexts = []
@@ -1419,7 +1563,7 @@ class RetardantDropBayesOptSR:
                 raise ValueError("Unknown candidate_strategy. Use 'random', 'random_mask', 'qmc', or 'mixed'.")
 
             Xcand_theta = np.atleast_2d(Xcand_theta)
-            Xcand = np.vstack([self.theta_to_gp_features(th) for th in Xcand_theta])
+            Xcand = np.vstack([self._gp_features(th, kernel_frame) for th in Xcand_theta])
             y_best = float(np.min(y))
             ei = expected_improvement(Xcand, gp, y_best=y_best, xi=xi)
             best_ei_idx = int(np.argmax(ei))
@@ -1430,7 +1574,7 @@ class RetardantDropBayesOptSR:
             mu_next = float(mu_next[0])
             std_next = float(std_next[0])
 
-            y_next = float(self.expected_value_burned_area(theta_next, seed=eval_seed))
+            y_next = float(self.objective_value(theta_next, seed=eval_seed))
 
             X_theta = np.vstack([X_theta, theta_next])
             X = np.vstack([X, x_next])
@@ -1480,6 +1624,7 @@ class RetardantDropBayesOptSR:
         verbose: bool = True,
         print_every: int = 1,
         use_ard_kernel: bool = False,
+        kernel_frame: str = "wind",
         init_strategy: str = "random",  # "random", "random_mask", "heuristic"
         init_heuristic_random_frac: float = 0.2,
         init_heuristic_kwargs: dict | None = None,
@@ -1546,9 +1691,19 @@ class RetardantDropBayesOptSR:
                 self.fire_model.plot_search_domain(self.search_domain_mask, title="Search Domain (Between Boundaries)")
                 self.plot_sr_domain()
 
+        kernel_frame = str(kernel_frame).lower().strip()
+        if kernel_frame not in {"wind", "sr"}:
+            raise ValueError("kernel_frame must be 'wind' or 'sr'")
+
         def _make_kernel():
             if use_ard_kernel:
                 base = Matern(length_scale=np.ones(4 * self.n_drones, dtype=float), nu=2.5, length_scale_bounds=(1e-3, 1e3))
+            elif str(kernel_frame).lower().strip() == "wind":
+                base = Matern(
+                    length_scale=np.tile([0.35, 0.15, 0.5, 0.5], self.n_drones),
+                    nu=2.5,
+                    length_scale_bounds=(1e-3, 1e3),
+                )
             else:
                 base = TiedSRDeltaMatern(ls=0.2, lr=0.2, ldelta=0.5, nu=2.5, length_scale_bounds=(1e-3, 1e3))
             return ConstantKernel(1.0, (1e-3, 1e3)) * base + WhiteKernel(noise_level=1.0, noise_level_bounds=(1e-6, 1e2))
@@ -1591,7 +1746,7 @@ class RetardantDropBayesOptSR:
         X_theta_low = np.atleast_2d(_sample_init_thetas(n_init_low))
         y_low = np.array(
             [
-                self.expected_value_burned_area(
+                self.objective_value(
                     th,
                     seed=eval_seed,
                     fidelity="low",
@@ -1605,11 +1760,11 @@ class RetardantDropBayesOptSR:
             ],
             dtype=float,
         )
-        X_low = np.vstack([self.theta_to_gp_features(th) for th in X_theta_low]) if len(X_theta_low) > 0 else np.empty((0, 4 * self.n_drones))
+        X_low = np.vstack([self._gp_features(th, kernel_frame) for th in X_theta_low]) if len(X_theta_low) > 0 else np.empty((0, 4 * self.n_drones))
 
         X_theta_high = np.atleast_2d(_sample_init_thetas(n_init_high))
-        y_high = np.array([self.expected_value_burned_area(th, seed=eval_seed, fidelity="high") for th in X_theta_high], dtype=float)
-        X_high = np.vstack([self.theta_to_gp_features(th) for th in X_theta_high]) if len(X_theta_high) > 0 else np.empty((0, 4 * self.n_drones))
+        y_high = np.array([self.objective_value(th, seed=eval_seed, fidelity="high") for th in X_theta_high], dtype=float)
+        X_high = np.vstack([self._gp_features(th, kernel_frame) for th in X_theta_high]) if len(X_theta_high) > 0 else np.empty((0, 4 * self.n_drones))
 
         y_nexts_high: list[float] = list(y_high.tolist())
         y_bests_high: list[float] = [float(np.min(y_high))] if len(y_high) > 0 else []
@@ -1623,7 +1778,7 @@ class RetardantDropBayesOptSR:
         def _fit_gp(X_arr: np.ndarray, y_arr: np.ndarray):
             if len(y_arr) == 0:
                 return None
-            gp = GaussianProcessRegressor(kernel=_make_kernel(), normalize_y=True, n_restarts_optimizer=2, random_state=None)
+            gp = GaussianProcessRegressor(kernel=_make_kernel(), normalize_y=True, n_restarts_optimizer=2, random_state=0)
             gp.fit(X_arr, y_arr)
             return gp
 
@@ -1690,7 +1845,7 @@ class RetardantDropBayesOptSR:
                 raise ValueError("Unknown candidate_strategy. Use 'random', 'random_mask', 'qmc', or 'mixed'.")
 
             Xcand_theta = np.atleast_2d(Xcand_theta)
-            Xcand = np.vstack([self.theta_to_gp_features(th) for th in Xcand_theta])
+            Xcand = np.vstack([self._gp_features(th, kernel_frame) for th in Xcand_theta])
 
             if gp_low is not None:
                 mu_L, sigma_L = gp_low.predict(Xcand, return_std=True)
@@ -1741,7 +1896,7 @@ class RetardantDropBayesOptSR:
             theta_next = Xcand_theta[best_ei_idx]
             if fidelity_next == "low":
                 y_next = float(
-                    self.expected_value_burned_area(
+                    self.objective_value(
                         theta_next,
                         seed=eval_seed,
                         fidelity="low",
@@ -1757,7 +1912,7 @@ class RetardantDropBayesOptSR:
                 y_low = np.append(y_low, y_next)
                 low_count += 1
             else:
-                y_next = float(self.expected_value_burned_area(theta_next, seed=eval_seed, fidelity="high"))
+                y_next = float(self.objective_value(theta_next, seed=eval_seed, fidelity="high"))
                 X_theta_high = np.vstack([X_theta_high, theta_next])
                 X_high = np.vstack([X_high, Xcand[best_ei_idx]])
                 y_high = np.append(y_high, y_next)
@@ -1917,7 +2072,7 @@ class RetardantDropBayesOptSR:
         best_y = float("inf")
 
         for i, theta in enumerate(np.atleast_2d(thetas), start=1):
-            y_val = float(self.expected_value_burned_area(theta, seed=eval_seed))
+            y_val = float(self.objective_value(theta, seed=eval_seed))
             y_vals.append(y_val)
 
             if y_val < best_y:

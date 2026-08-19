@@ -374,7 +374,6 @@ class CAFireModel:
         cell_cap: float | None = None,  # optional cap on accumulated retardant per cell
     ):
         if drone_params is None:
-            print("No drone_params")
             return
         drone_params = np.asarray(drone_params, dtype=float)
         if drone_params.size == 0:
@@ -537,6 +536,7 @@ class CAFireModel:
         avoid_burning_drop: bool = True, # whether to avoid dropping retardant on burning cells
         forbid_burning_overlap: bool = False, # whether to raise value error if drop overlaps burning cells
         burning_prob_threshold: float = 0.25, # if avoid burning is True, threshold for considering a cell as burning
+        return_batch: bool = False, # preserve the Monte-Carlo ensemble for distributional objectives
     ) -> FireState:
         nx, ny = self.env.grid_size
         dt_s = float(self.env.dt_s)
@@ -622,6 +622,9 @@ class CAFireModel:
         for step_idx in range(num_steps):
             ros_step = self._slice_time_param(ros_samples, ros_has_time, step_idx)
             self.step_batch(state, ros_mps=ros_step, wind_coeff=wind_coeff_samples, diag=diag)
+
+        if return_batch:
+            return state
 
         return self.aggregate_mc_to_state(state)
 

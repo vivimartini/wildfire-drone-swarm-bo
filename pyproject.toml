@@ -7,19 +7,27 @@ name = "wildfire-drone-swarm-bo"
 version = "0.1.0"
 description = "Optimising drone swarms to fight wildfires with Bayesian optimisation"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "numpy",
     "scipy",
-    "pandas",
-    "GPy",
-    "botorch",
-    "torch",
     "matplotlib",
-    "seaborn",
     "scikit-learn",
+]
+
+[project.optional-dependencies]
+notebooks = [
+    "pandas",
+    "seaborn",
     "tqdm",
 ]
+dev = ["pytest"]
+
+[project.scripts]
+wildfire-bo-demo = "fire_model.demo:main"
 
 [tool.setuptools.packages.find]
 include = ["fire_model*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

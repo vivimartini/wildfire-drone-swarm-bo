@@ -1,0 +1,91 @@
+{
+  "objective": "CVaR_0.90 of asset-value loss",
+  "kernel": "anisotropic Mat\u00e9rn on wind-rotated position/orientation features",
+  "high_fidelity": {
+    "simulations": 24,
+    "horizon_s": 600.0
+  },
+  "low_fidelity": {
+    "simulations": 8,
+    "horizon_s": 300.0
+  },
+  "validation": {
+    "simulations": 64,
+    "seed": 101
+  },
+  "baseline_cvar": 18.566964285714285,
+  "selected_plan_cvar": 17.5,
+  "selection_estimate_cvar": 16.114583333333332,
+  "improvement_percent": 5.746573695599898,
+  "best_theta_sr": [
+    0.9614987982137073,
+    0.17252481409632392,
+    0.04549288721573519
+  ],
+  "best_drop_xy_phi": [
+    [
+      14.330463729893655,
+      13.95633267138351,
+      0.0354968441895398
+    ]
+  ],
+  "fidelity_trace": [
+    {
+      "iter": 1,
+      "fidelity": "low",
+      "y_next": 2.890625,
+      "rho": 7.038520082406852,
+      "ei": 0.5992234906617518,
+      "mu_H": 17.065696657009624,
+      "sigma_H": 0.9553976663912339,
+      "mu_L": 2.500482893052666,
+      "sigma_L": 0.1321030606872167,
+      "low_count": 4,
+      "high_count": 3,
+      "best_high": 17.453125
+    },
+    {
+      "iter": 2,
+      "fidelity": "high",
+      "y_next": 18.276041666666668,
+      "rho": 6.794842665212964,
+      "ei": 0.6548653748471517,
+      "mu_H": 17.222989367204562,
+      "sigma_H": 1.3476657103149672,
+      "mu_L": 2.6210937520601956,
+      "sigma_L": 0.1953908433719246,
+      "low_count": 4,
+      "high_count": 4,
+      "best_high": 17.453125
+    },
+    {
+      "iter": 3,
+      "fidelity": "high",
+      "y_next": 17.09375,
+      "rho": 6.839291929290796,
+      "ei": 0.6293967532455751,
+      "mu_H": 17.245851928899718,
+      "sigma_H": 1.3156563878344667,
+      "mu_L": 2.575522819902145,
+      "sigma_L": 0.19011786161962893,
+      "low_count": 4,
+      "high_count": 5,
+      "best_high": 17.09375
+    },
+    {
+      "iter": 4,
+      "fidelity": "high",
+      "y_next": 16.114583333333332,
+      "rho": 6.799964102919961,
+      "ei": 0.7648071074157239,
+      "mu_H": 16.504876815587487,
+      "sigma_H": 1.0335818278312574,
+      "mu_L": 2.4891705031532005,
+      "sigma_L": 0.15198916525141948,
+      "low_count": 4,
+      "high_count": 6,
+      "best_high": 16.114583333333332
+    }
+  ],
+  "seed": 17
+}
