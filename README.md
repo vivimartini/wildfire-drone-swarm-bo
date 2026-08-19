@@ -93,6 +93,7 @@ fire_model/                      Core simulation + optimisation library
   finsler.py                     Randers metric, Finsler arrival time, kernel warp
   finsler_validation.py          Validates the geometry against the simulator
   cold_start.py                  Equal-budget front-free vs SR benchmark
+                                 and the two-knob crossover-mechanism sweep
   demo.py                        Deterministic command-line reproduction
 
 tests/                           CA, CVaR, wind-frame and Finsler regression tests
@@ -317,6 +318,14 @@ representation buys sample efficiency during early detection, while the
 simulation-derived representation catches up once enough rollouts are
 available. Full raw paired results and every selected plan are checked into
 [`artifacts/cold_start/cold_start_summary.json`](artifacts/cold_start/cold_start_summary.json).
+
+A two-knob follow-up asked whether that crossover moves the way the mechanism
+says it should (`python -m fire_model.cold_start --mechanism`). Raising
+anisotropy left Finsler ahead through budget 12, as predicted. Raising
+simulator noise did **not** move the crossover earlier: both planners got
+worse, and SR's late catch-up disappeared. The physics prior's relative
+lifetime is not a monotone function of how badly the mean-field metric fits.
+See [COLD_START_FINDING.md](COLD_START_FINDING.md).
 
 ---
 

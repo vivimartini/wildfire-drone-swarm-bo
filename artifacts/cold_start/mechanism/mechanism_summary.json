@@ -1,0 +1,704 @@
+{
+  "claim": "If the mean-field arrival metric is why Finsler wins early, raising simulator stochasticity should move the crossover earlier and raising anisotropy should move it later.",
+  "protocol": {
+    "planning_seeds_per_scenario": 6,
+    "quick": false,
+    "conditions": {
+      "baseline": {
+        "label": "baseline",
+        "prediction": null,
+        "knobs": {
+          "wind_coeff": 0.8,
+          "ros_future_jitter_frac": 0.3,
+          "wind_coeff_future_jitter_frac": 0.25
+        }
+      },
+      "high_stochasticity": {
+        "label": "higher stochasticity",
+        "prediction": "earlier",
+        "knobs": {
+          "wind_coeff": 0.8,
+          "ros_future_jitter_frac": 0.6,
+          "wind_coeff_future_jitter_frac": 0.5
+        }
+      },
+      "high_anisotropy": {
+        "label": "higher anisotropy",
+        "prediction": "later",
+        "knobs": {
+          "wind_coeff": 0.95,
+          "ros_future_jitter_frac": 0.3,
+          "wind_coeff_future_jitter_frac": 0.25
+        }
+      }
+    }
+  },
+  "conditions": {
+    "baseline": {
+      "label": "baseline",
+      "prediction": null,
+      "knobs": {
+        "wind_coeff": 0.8,
+        "ros_future_jitter_frac": 0.3,
+        "wind_coeff_future_jitter_frac": 0.25
+      },
+      "crossover_budget": 9.964595248530053,
+      "crossover_never": false,
+      "advantage_curve": {
+        "3": 3.098374445598569,
+        "4": 2.2611051850009747,
+        "6": 2.008672766918325,
+        "8": 1.1743168165396152,
+        "12": -1.2166424763086428
+      },
+      "aggregate": {
+        "3": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 12.345221862995416,
+          "sr_mean_improvement_percent": 9.246847417396847,
+          "free_setup_sr_mean_improvement_percent": 10.499145956126773,
+          "finsler_mean_advantage_percentage_points": 3.098374445598569,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -1.4196577894570575,
+            7.616406680654196
+          ],
+          "finsler_median_advantage_percentage_points": 2.1751932457244836,
+          "finsler_paired_wins": 10,
+          "paired_sign_test_p": 0.8145294189453125,
+          "finsler_wins_vs_free_setup_sr": 10,
+          "free_setup_sr_sign_test_p": 0.8145294189453125,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 2.941197465022954,
+              "finsler_wins": 4
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 1.220406178447705,
+              "finsler_wins": 3
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 5.133519693325047,
+              "finsler_wins": 3
+            }
+          }
+        },
+        "4": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 12.760251141127746,
+          "sr_mean_improvement_percent": 10.499145956126773,
+          "free_setup_sr_mean_improvement_percent": 11.560576768132103,
+          "finsler_mean_advantage_percentage_points": 2.2611051850009747,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -1.7983712993356353,
+            6.320581669337585
+          ],
+          "finsler_median_advantage_percentage_points": 1.060718510355584,
+          "finsler_paired_wins": 10,
+          "paired_sign_test_p": 0.8145294189453125,
+          "finsler_wins_vs_free_setup_sr": 8,
+          "free_setup_sr_sign_test_p": 0.8145294189453125,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 2.665346564750722,
+              "finsler_wins": 4
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": -0.018617861333714753,
+              "finsler_wins": 3
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 4.1365868515859185,
+              "finsler_wins": 3
+            }
+          }
+        },
+        "6": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 14.355889831773633,
+          "sr_mean_improvement_percent": 12.347217064855307,
+          "free_setup_sr_mean_improvement_percent": 13.597081048236237,
+          "finsler_mean_advantage_percentage_points": 2.008672766918325,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -1.9212180906497576,
+            5.938563624486408
+          ],
+          "finsler_median_advantage_percentage_points": 2.747435169255507,
+          "finsler_paired_wins": 11,
+          "paired_sign_test_p": 0.480682373046875,
+          "finsler_wins_vs_free_setup_sr": 9,
+          "free_setup_sr_sign_test_p": 1.0,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 0.7660353319379443,
+              "finsler_wins": 3
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 2.332785286872099,
+              "finsler_wins": 4
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 2.9271976819449326,
+              "finsler_wins": 4
+            }
+          }
+        },
+        "8": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 14.694114465736536,
+          "sr_mean_improvement_percent": 13.519797649196919,
+          "free_setup_sr_mean_improvement_percent": 15.044554065481663,
+          "finsler_mean_advantage_percentage_points": 1.1743168165396152,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -2.5966457565552803,
+            4.945279389634511
+          ],
+          "finsler_median_advantage_percentage_points": 2.784180351771597,
+          "finsler_paired_wins": 10,
+          "paired_sign_test_p": 0.8145294189453125,
+          "finsler_wins_vs_free_setup_sr": 10,
+          "free_setup_sr_sign_test_p": 0.8145294189453125,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 0.3304204860739395,
+              "finsler_wins": 3
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 3.4550151069755586,
+              "finsler_wins": 5
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": -0.2624851434306521,
+              "finsler_wins": 2
+            }
+          }
+        },
+        "12": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 16.761829069300006,
+          "sr_mean_improvement_percent": 17.978471545608652,
+          "free_setup_sr_mean_improvement_percent": 16.24125044339013,
+          "finsler_mean_advantage_percentage_points": -1.2166424763086428,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -4.922722653513754,
+            2.4894377008964677
+          ],
+          "finsler_median_advantage_percentage_points": -0.7476007664758528,
+          "finsler_paired_wins": 7,
+          "paired_sign_test_p": 0.480682373046875,
+          "finsler_wins_vs_free_setup_sr": 9,
+          "free_setup_sr_sign_test_p": 1.0,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 3.551001422994759,
+              "finsler_wins": 5
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": -3.8317465026390134,
+              "finsler_wins": 0
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": -3.369182349281674,
+              "finsler_wins": 2
+            }
+          }
+        }
+      },
+      "protocol": {
+        "scenarios": [
+          "head_asset",
+          "flank_asset",
+          "diagonal_asset"
+        ],
+        "grid_size": 32,
+        "planning_seeds_per_scenario": 6,
+        "planning_sims_per_evaluation": 12,
+        "validation_sims": 128,
+        "horizon_s": 600.0,
+        "budgets_evaluation_equivalents": [
+          3,
+          4,
+          6,
+          8,
+          12
+        ],
+        "sr_setup_cost_equivalents": 1,
+        "finsler_setup_cost_equivalents": 0,
+        "validation_is_not_planning_information": true,
+        "wind_coeff": 0.8,
+        "ros_future_jitter_frac": 0.3,
+        "wind_coeff_future_jitter_frac": 0.25,
+        "finsler_median_setup_wall_time_s": 0.056987083498825086,
+        "sr_median_setup_wall_time_s": 0.06365291700421949
+      }
+    },
+    "high_stochasticity": {
+      "label": "higher stochasticity",
+      "prediction": "earlier",
+      "knobs": {
+        "wind_coeff": 0.8,
+        "ros_future_jitter_frac": 0.6,
+        "wind_coeff_future_jitter_frac": 0.5
+      },
+      "crossover_budget": null,
+      "crossover_never": true,
+      "advantage_curve": {
+        "3": 2.2203596511733985,
+        "4": 2.1388427532365863,
+        "6": 1.7960665005013539,
+        "8": 0.9459405464148242,
+        "12": 1.6135037018809326
+      },
+      "aggregate": {
+        "3": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 7.569248777883146,
+          "sr_mean_improvement_percent": 5.3488891267097465,
+          "free_setup_sr_mean_improvement_percent": 5.064608872357331,
+          "finsler_mean_advantage_percentage_points": 2.2203596511733985,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            0.09840514019392366,
+            4.342314162152873
+          ],
+          "finsler_median_advantage_percentage_points": 1.577257910815974,
+          "finsler_paired_wins": 12,
+          "paired_sign_test_p": 0.237884521484375,
+          "finsler_wins_vs_free_setup_sr": 12,
+          "free_setup_sr_sign_test_p": 0.237884521484375,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 2.6667056182340776,
+              "finsler_wins": 5
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 0.918991408685332,
+              "finsler_wins": 4
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 3.0753819266007874,
+              "finsler_wins": 3
+            }
+          }
+        },
+        "4": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 7.203451625593918,
+          "sr_mean_improvement_percent": 5.064608872357331,
+          "free_setup_sr_mean_improvement_percent": 5.227551715664617,
+          "finsler_mean_advantage_percentage_points": 2.1388427532365863,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -0.25952094658183356,
+            4.537206453055006
+          ],
+          "finsler_median_advantage_percentage_points": 1.4224930277692718,
+          "finsler_paired_wins": 12,
+          "paired_sign_test_p": 0.237884521484375,
+          "finsler_wins_vs_free_setup_sr": 12,
+          "free_setup_sr_sign_test_p": 0.237884521484375,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 3.1572386416644966,
+              "finsler_wins": 5
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 1.0313015817654567,
+              "finsler_wins": 4
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 2.2279880362798066,
+              "finsler_wins": 3
+            }
+          }
+        },
+        "6": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 7.552734192387918,
+          "sr_mean_improvement_percent": 5.756667691886563,
+          "free_setup_sr_mean_improvement_percent": 6.174128265031047,
+          "finsler_mean_advantage_percentage_points": 1.7960665005013539,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -0.9954156080491998,
+            4.5875486090519075
+          ],
+          "finsler_median_advantage_percentage_points": 1.536795936633327,
+          "finsler_paired_wins": 14,
+          "paired_sign_test_p": 0.0308837890625,
+          "finsler_wins_vs_free_setup_sr": 13,
+          "free_setup_sr_sign_test_p": 0.09625244140625,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 3.3156692341704104,
+              "finsler_wins": 6
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": -0.10336990184047368,
+              "finsler_wins": 4
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 2.175900169174126,
+              "finsler_wins": 4
+            }
+          }
+        },
+        "8": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 7.9109737037052605,
+          "sr_mean_improvement_percent": 6.965033157290435,
+          "free_setup_sr_mean_improvement_percent": 7.306946171221798,
+          "finsler_mean_advantage_percentage_points": 0.9459405464148242,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -1.7651174654676351,
+            3.6569985582972837
+          ],
+          "finsler_median_advantage_percentage_points": 0.5867924489046363,
+          "finsler_paired_wins": 10,
+          "paired_sign_test_p": 0.8145294189453125,
+          "finsler_wins_vs_free_setup_sr": 10,
+          "free_setup_sr_sign_test_p": 0.8145294189453125,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 0.9534485121886576,
+              "finsler_wins": 3
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 0.351971199056869,
+              "finsler_wins": 4
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 1.532401927998946,
+              "finsler_wins": 3
+            }
+          }
+        },
+        "12": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 9.000446765077365,
+          "sr_mean_improvement_percent": 7.386943063196434,
+          "free_setup_sr_mean_improvement_percent": 8.344096513832607,
+          "finsler_mean_advantage_percentage_points": 1.6135037018809326,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -1.0642100870708058,
+            4.291217490832671
+          ],
+          "finsler_median_advantage_percentage_points": 2.6335115172656285,
+          "finsler_paired_wins": 12,
+          "paired_sign_test_p": 0.237884521484375,
+          "finsler_wins_vs_free_setup_sr": 10,
+          "free_setup_sr_sign_test_p": 0.8145294189453125,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": -0.2799833641802385,
+              "finsler_wins": 4
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 3.2786654159606035,
+              "finsler_wins": 5
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 1.8418290538624342,
+              "finsler_wins": 3
+            }
+          }
+        }
+      },
+      "protocol": {
+        "scenarios": [
+          "head_asset",
+          "flank_asset",
+          "diagonal_asset"
+        ],
+        "grid_size": 32,
+        "planning_seeds_per_scenario": 6,
+        "planning_sims_per_evaluation": 12,
+        "validation_sims": 128,
+        "horizon_s": 600.0,
+        "budgets_evaluation_equivalents": [
+          3,
+          4,
+          6,
+          8,
+          12
+        ],
+        "sr_setup_cost_equivalents": 1,
+        "finsler_setup_cost_equivalents": 0,
+        "validation_is_not_planning_information": true,
+        "wind_coeff": 0.8,
+        "ros_future_jitter_frac": 0.6,
+        "wind_coeff_future_jitter_frac": 0.5,
+        "finsler_median_setup_wall_time_s": 0.05684099999780301,
+        "sr_median_setup_wall_time_s": 0.06245570800092537
+      }
+    },
+    "high_anisotropy": {
+      "label": "higher anisotropy",
+      "prediction": "later",
+      "knobs": {
+        "wind_coeff": 0.95,
+        "ros_future_jitter_frac": 0.3,
+        "wind_coeff_future_jitter_frac": 0.25
+      },
+      "crossover_budget": null,
+      "crossover_never": true,
+      "advantage_curve": {
+        "3": 1.1036628591380016,
+        "4": 2.8704136868533774,
+        "6": 1.100551815849916,
+        "8": 2.55151419197931,
+        "12": 2.802396555674815
+      },
+      "aggregate": {
+        "3": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 13.58458057664356,
+          "sr_mean_improvement_percent": 12.480917717505559,
+          "free_setup_sr_mean_improvement_percent": 12.276196490023127,
+          "finsler_mean_advantage_percentage_points": 1.1036628591380016,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -3.5609899226336843,
+            5.768315640909687
+          ],
+          "finsler_median_advantage_percentage_points": 1.8706895552490295,
+          "finsler_paired_wins": 10,
+          "paired_sign_test_p": 0.8145294189453125,
+          "finsler_wins_vs_free_setup_sr": 9,
+          "free_setup_sr_sign_test_p": 1.0,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 3.837291339630596,
+              "finsler_wins": 4
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": -0.8882455405793314,
+              "finsler_wins": 3
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 0.36194277836274025,
+              "finsler_wins": 3
+            }
+          }
+        },
+        "4": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 15.146610176876505,
+          "sr_mean_improvement_percent": 12.276196490023127,
+          "free_setup_sr_mean_improvement_percent": 13.541022942620664,
+          "finsler_mean_advantage_percentage_points": 2.8704136868533774,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -1.1394958077837853,
+            6.880323181490541
+          ],
+          "finsler_median_advantage_percentage_points": 1.8706895552490295,
+          "finsler_paired_wins": 10,
+          "paired_sign_test_p": 0.8145294189453125,
+          "finsler_wins_vs_free_setup_sr": 9,
+          "free_setup_sr_sign_test_p": 1.0,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 6.4586942115182735,
+              "finsler_wins": 4
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 0.3145203636537099,
+              "finsler_wins": 3
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 1.8380264853881505,
+              "finsler_wins": 3
+            }
+          }
+        },
+        "6": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 15.50492168316594,
+          "sr_mean_improvement_percent": 14.404369867316019,
+          "free_setup_sr_mean_improvement_percent": 13.793746335237982,
+          "finsler_mean_advantage_percentage_points": 1.100551815849916,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -2.6817624163421057,
+            4.8828660480419375
+          ],
+          "finsler_median_advantage_percentage_points": 0.9498860871233878,
+          "finsler_paired_wins": 9,
+          "paired_sign_test_p": 1.0,
+          "finsler_wins_vs_free_setup_sr": 11,
+          "free_setup_sr_sign_test_p": 0.480682373046875,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 5.428234671999167,
+              "finsler_wins": 4
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 0.38428784157621515,
+              "finsler_wins": 3
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": -2.5108670660256345,
+              "finsler_wins": 2
+            }
+          }
+        },
+        "8": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 16.656104052127038,
+          "sr_mean_improvement_percent": 14.104589860147723,
+          "free_setup_sr_mean_improvement_percent": 14.563367316765124,
+          "finsler_mean_advantage_percentage_points": 2.55151419197931,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -1.128625824457644,
+            6.231654208416264
+          ],
+          "finsler_median_advantage_percentage_points": 4.3011575821900045,
+          "finsler_paired_wins": 12,
+          "paired_sign_test_p": 0.237884521484375,
+          "finsler_wins_vs_free_setup_sr": 12,
+          "free_setup_sr_sign_test_p": 0.237884521484375,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 4.71941525060715,
+              "finsler_wins": 4
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 3.5156469217477855,
+              "finsler_wins": 4
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": -0.580519596417005,
+              "finsler_wins": 4
+            }
+          }
+        },
+        "12": {
+          "n_pairs": 18,
+          "finsler_mean_improvement_percent": 21.96530037416577,
+          "sr_mean_improvement_percent": 19.16290381849096,
+          "free_setup_sr_mean_improvement_percent": 19.17782438191698,
+          "finsler_mean_advantage_percentage_points": 2.802396555674815,
+          "finsler_mean_advantage_ci95_percentage_points": [
+            -1.5116910008802713,
+            7.116484112229902
+          ],
+          "finsler_median_advantage_percentage_points": 3.0261390463241487,
+          "finsler_paired_wins": 11,
+          "paired_sign_test_p": 0.480682373046875,
+          "finsler_wins_vs_free_setup_sr": 12,
+          "free_setup_sr_sign_test_p": 0.237884521484375,
+          "ties": 0,
+          "by_scenario": {
+            "diagonal_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 1.8838757700053226,
+              "finsler_wins": 3
+            },
+            "flank_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 6.0514792718833545,
+              "finsler_wins": 5
+            },
+            "head_asset": {
+              "n_pairs": 6,
+              "mean_advantage_percentage_points": 0.47183462513576746,
+              "finsler_wins": 3
+            }
+          }
+        }
+      },
+      "protocol": {
+        "scenarios": [
+          "head_asset",
+          "flank_asset",
+          "diagonal_asset"
+        ],
+        "grid_size": 32,
+        "planning_seeds_per_scenario": 6,
+        "planning_sims_per_evaluation": 12,
+        "validation_sims": 128,
+        "horizon_s": 600.0,
+        "budgets_evaluation_equivalents": [
+          3,
+          4,
+          6,
+          8,
+          12
+        ],
+        "sr_setup_cost_equivalents": 1,
+        "finsler_setup_cost_equivalents": 0,
+        "validation_is_not_planning_information": true,
+        "wind_coeff": 0.95,
+        "ros_future_jitter_frac": 0.3,
+        "wind_coeff_future_jitter_frac": 0.25,
+        "finsler_median_setup_wall_time_s": 0.05690616700303508,
+        "sr_median_setup_wall_time_s": 0.06307904200002667
+      }
+    }
+  },
+  "predictions": {
+    "high_stochasticity_moved_earlier": false,
+    "high_anisotropy_moved_later": true,
+    "predicted_order_held": false,
+    "crossover_budgets": {
+      "baseline": 9.964595248530053,
+      "high_stochasticity": null,
+      "high_anisotropy": null
+    },
+    "crossover_never": {
+      "baseline": false,
+      "high_stochasticity": true,
+      "high_anisotropy": true
+    }
+  }
+}

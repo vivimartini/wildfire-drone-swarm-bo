@@ -200,3 +200,23 @@ gap comes from arrival-time coordinates versus other representation choices.
 
 See `COLD_START_FINDING.md` and `artifacts/cold_start/cold_start_summary.json`
 for the full protocol, caveats and raw selected plans.
+
+## The two-knob test did not confirm a simple crossover mechanism
+
+The headline crossover is one number from one configuration. The pre-registered
+predictions were: more simulator jitter moves it earlier; more anisotropy
+moves it later. On 18 pairs per condition, baseline still crosses at budget
+9.96. Higher anisotropy never crosses in \([3,12]\), which is the predicted
+direction. Higher jitter also never crosses: both arms get worse, and SR's
+late catch-up is the quantity that collapses.
+
+That failure is informative. The crossover is a *relative* lifetime: it is
+when a Monte-Carlo front becomes more useful than the mean-field metric, not
+when the metric itself stops being a prior. The claim "I can predict when a
+physics prior stops paying for itself" is therefore not established. The
+weaker claim that survives is that the late-budget ranking depends on how
+informative the simulated boundary is, which is why a hybrid representation
+(start as arrival time, correct with accumulated simulated boundaries) is the
+actual research next step rather than another comparison.
+
+See `artifacts/cold_start/mechanism/mechanism_summary.json`.

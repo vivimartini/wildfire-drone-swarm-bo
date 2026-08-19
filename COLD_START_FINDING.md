@@ -95,6 +95,9 @@ MPLBACKEND=Agg python -m fire_model.cold_start --quick
 
 # 3 scenarios × 12 seeds × paired independent validation
 MPLBACKEND=Agg python -m fire_model.cold_start
+
+# Crossover-mechanism sweep (3 FireEnv conditions × 6 seeds)
+MPLBACKEND=Agg python -m fire_model.cold_start --mechanism
 ```
 
 The complete protocol, raw per-seed curves, selected parameters and aggregate
@@ -112,3 +115,45 @@ The result supports:
 
 It does not support real-world operational effectiveness, universal superiority
 over SR, or a claim that Finsler wildfire geometry itself is novel.
+
+## The crossover is not yet a mechanism
+
+The 12-seed headline is one curve from one `FireEnv`. If the mean-field
+arrival metric is why Finsler wins early, two directional moves must follow:
+
+- raise ROS/wind jitter, so that metric describes the stochastic front worse,
+  and the crossover should move **earlier**;
+- raise `wind_coeff`, so the one-form carries more heading information, and
+  the crossover should move **later**.
+
+`python -m fire_model.cold_start --mechanism` re-runs the equal-budget protocol
+on those three environments (6 seeds × 3 geometries = 18 pairs each). Baseline
+reproduces the headline shape: the mean advantage crosses zero at budget
+**9.96**. The predicted order did **not** hold.
+
+| condition | knobs | budget-3 advantage | budget-12 advantage | interpolated crossover |
+| --- | --- | ---: | ---: | ---: |
+| baseline | `wind_coeff=0.8`, jitter 0.30/0.25 | +3.10 pp | −1.22 pp | 9.96 |
+| higher stochasticity | jitter 0.60/0.50 | +2.22 pp | +1.61 pp | none in [3, 12] |
+| higher anisotropy | `wind_coeff=0.95` | +1.10 pp | +2.80 pp | none in [3, 12] |
+
+![Crossover mechanism test](artifacts/cold_start/mechanism/crossover_mechanism.png)
+
+Anisotropy moved later, as predicted. Stochasticity moved later, not earlier.
+The absolute numbers show why the naive prediction was incomplete:
+
+- higher jitter made **both** planners worse (budget-3 CVaR improvement fell
+  from 12.35%/9.25% to 7.57%/5.35%);
+- SR's late-budget catch-up is what disappeared (budget-12 SR improvement
+  17.98% → 7.39%, against Finsler 16.76% → 9.00%).
+
+The crossover is not the budget at which the physics prior dies. It is the
+budget at which a simulated front becomes more informative than the mean-field
+metric. Raising process noise degrades that simulated front as well, so SR
+need not overtake. Most 18-pair intervals still cover zero; this is a
+directional test on mean curves, not a replacement for the 36-pair headline.
+
+```bash
+MPLBACKEND=Agg python -m fire_model.cold_start --mechanism --quick
+MPLBACKEND=Agg python -m fire_model.cold_start --mechanism
+```

@@ -18,6 +18,8 @@ CI-sized experiment. Outputs are written to:
 - `artifacts/finsler/finsler_validation.png`
 - `artifacts/cold_start/cold_start_summary.json`
 - `artifacts/cold_start/cold_start_budget.png`
+- `artifacts/cold_start/mechanism/mechanism_summary.json`
+- `artifacts/cold_start/mechanism/crossover_mechanism.png`
 
 ## What the experiment fixes
 
@@ -98,6 +100,31 @@ the claimed effect is cold-start sample efficiency, not universal dominance.
 Validation simulations measure the selected plans and are not included in
 planning budget because neither arm can use them. Raw per-seed curves and
 selected parameters are preserved in the JSON artifact.
+
+## Reproducing the crossover-mechanism test
+
+```bash
+MPLBACKEND=Agg python -m fire_model.cold_start --mechanism --quick
+MPLBACKEND=Agg python -m fire_model.cold_start --mechanism
+```
+
+The full run keeps the equal-budget protocol and changes two `FireEnv` knobs
+that the mean-field story names, with 6 paired seeds per geometry (18 pairs
+per condition):
+
+- baseline: `wind_coeff=0.8`, ROS/wind jitter `0.30/0.25`;
+- higher stochasticity: same wind, jitter `0.60/0.50` — predicted earlier
+  crossover;
+- higher anisotropy: `wind_coeff=0.95`, baseline jitter — predicted later
+  crossover.
+
+Crossover location is linear interpolation of the mean paired-advantage curve
+through zero. It is a descriptive coordinate, not a hypothesis test. The
+checked-in full result is: baseline crosses at 9.96; neither perturbation
+crosses inside \([3,12]\). The joint predicted order therefore does not hold.
+Higher anisotropy is in the predicted direction. Higher stochasticity is not:
+absolute CVaR improvement falls for both arms, and SR's budget-12 improvement
+collapses from 17.98% to 7.39%. Most 18-pair intervals cover zero.
 
 ## Interpreting the output
 

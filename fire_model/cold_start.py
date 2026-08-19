@@ -38,15 +38,43 @@ from fire_model.ca import CAFireModel, FireState
 from fire_model.demo import build_scenario
 
 
-def build_early_detection_scenarios(nx: int) -> dict[str, tuple[CAFireModel, FireState]]:
+def _env_overrides(
+    env,
+    *,
+    wind_coeff: float | None = None,
+    ros_future_jitter_frac: float | None = None,
+    wind_coeff_future_jitter_frac: float | None = None,
+):
+    updates = {"wind_response": "elliptical"}
+    if wind_coeff is not None:
+        updates["wind_coeff"] = float(wind_coeff)
+    if ros_future_jitter_frac is not None:
+        updates["ros_future_jitter_frac"] = float(ros_future_jitter_frac)
+    if wind_coeff_future_jitter_frac is not None:
+        updates["wind_coeff_future_jitter_frac"] = float(wind_coeff_future_jitter_frac)
+    return replace(env, **updates)
+
+
+def build_early_detection_scenarios(
+    nx: int,
+    *,
+    wind_coeff: float | None = None,
+    ros_future_jitter_frac: float | None = None,
+    wind_coeff_future_jitter_frac: float | None = None,
+) -> dict[str, tuple[CAFireModel, FireState]]:
     """Three small fires with different asset/wind geometry."""
     base_model, state = build_scenario(nx=nx)
     base = base_model.env
     scenarios: dict[str, tuple[CAFireModel, FireState]] = {}
+    kw = dict(
+        wind_coeff=wind_coeff,
+        ros_future_jitter_frac=ros_future_jitter_frac,
+        wind_coeff_future_jitter_frac=wind_coeff_future_jitter_frac,
+    )
 
     # Asset directly in the heading direction.
     scenarios["head_asset"] = (
-        CAFireModel(replace(base, wind_response="elliptical"), seed=0),
+        CAFireModel(_env_overrides(base, **kw), seed=0),
         state,
     )
 
@@ -59,7 +87,7 @@ def build_early_detection_scenarios(nx: int) -> dict[str, tuple[CAFireModel, Fir
     ] = 12.0
     scenarios["flank_asset"] = (
         CAFireModel(
-            replace(base, value=flank_value, wind_response="elliptical"),
+            _env_overrides(replace(base, value=flank_value), **kw),
             seed=0,
         ),
         state,
@@ -76,17 +104,92 @@ def build_early_detection_scenarios(nx: int) -> dict[str, tuple[CAFireModel, Fir
     ] = 12.0
     scenarios["diagonal_asset"] = (
         CAFireModel(
-            replace(
-                base,
-                wind=diagonal_wind,
-                value=diagonal_value,
-                wind_response="elliptical",
+            _env_overrides(
+                replace(base, wind=diagonal_wind, value=diagonal_value),
+                **kw,
             ),
             seed=0,
         ),
         state,
     )
     return scenarios
+
+
+def interpolated_crossover(budgets: list[float] | tuple[float, ...], advantages: list[float]) -> float:
+    """Budget at which Finsler's mean paired advantage crosses through zero.
+
+    Linear interpolation between the last strictly positive point and the first
+    non-positive one. Returns ``+inf`` if the advantage never changes sign, and
+    the smallest tested budget if Finsler is already behind there. The quantity
+    is a descriptive location on a curve, not a hypothesis test.
+    """
+    budgets = [float(b) for b in budgets]
+    advantages = [float(a) for a in advantages]
+    if len(budgets) != len(advantages) or len(budgets) < 2:
+        raise ValueError("need at least two matched (budget, advantage) points")
+    if any(b1 <= b0 for b0, b1 in zip(budgets, budgets[1:])):
+        raise ValueError("budgets must be strictly increasing")
+    if advantages[0] <= 0.0:
+        return budgets[0]
+    for b0, a0, b1, a1 in zip(budgets, advantages, budgets[1:], advantages[1:]):
+        if a1 <= 0.0:
+            if a0 == a1:
+                return b1
+            return b0 + (a0 / (a0 - a1)) * (b1 - b0)
+    return float("inf")
+
+
+def _advantage_curve(aggregate: dict) -> tuple[list[int], list[float]]:
+    budgets = sorted(int(b) for b in aggregate)
+    advantages = [
+        float(aggregate[str(b)]["finsler_mean_advantage_percentage_points"])
+        for b in budgets
+    ]
+    return budgets, advantages
+
+
+def crossover_predictions_held(crossovers: dict[str, float]) -> dict:
+    """Check the two directional claims against interpolated crossover locations."""
+    baseline = float(crossovers["baseline"])
+    stochasticity = float(crossovers["high_stochasticity"])
+    anisotropy = float(crossovers["high_anisotropy"])
+    earlier = stochasticity < baseline
+    later = anisotropy > baseline
+    return {
+        "high_stochasticity_moved_earlier": earlier,
+        "high_anisotropy_moved_later": later,
+        "predicted_order_held": earlier and later,
+        "crossover_budgets": {
+            "baseline": baseline,
+            "high_stochasticity": stochasticity,
+            "high_anisotropy": anisotropy,
+        },
+    }
+
+
+MECHANISM_CONDITIONS = {
+    "baseline": {
+        "label": "baseline",
+        "prediction": None,
+        "wind_coeff": 0.8,
+        "ros_future_jitter_frac": 0.30,
+        "wind_coeff_future_jitter_frac": 0.25,
+    },
+    "high_stochasticity": {
+        "label": "higher stochasticity",
+        "prediction": "earlier",
+        "wind_coeff": 0.8,
+        "ros_future_jitter_frac": 0.60,
+        "wind_coeff_future_jitter_frac": 0.50,
+    },
+    "high_anisotropy": {
+        "label": "higher anisotropy",
+        "prediction": "later",
+        "wind_coeff": 0.95,
+        "ros_future_jitter_frac": 0.30,
+        "wind_coeff_future_jitter_frac": 0.25,
+    },
+}
 
 
 def rollout_steps(n_sims: int, horizon_s: float, dt_s: float) -> int:
@@ -379,10 +482,19 @@ def _plot(summary: dict, path: Path) -> None:
     plt.close(fig)
 
 
-def run_cold_start(output_dir: Path, *, quick: bool = False) -> dict:
+def run_cold_start(
+    output_dir: Path,
+    *,
+    quick: bool = False,
+    n_seeds: int | None = None,
+    write_artifacts: bool = True,
+    wind_coeff: float | None = None,
+    ros_future_jitter_frac: float | None = None,
+    wind_coeff_future_jitter_frac: float | None = None,
+) -> dict:
     warnings.filterwarnings("ignore", category=ConvergenceWarning)
     nx = 26 if quick else 32
-    n_seeds = 3 if quick else 12
+    n_seeds = (3 if quick else 12) if n_seeds is None else int(n_seeds)
     n_sims = 8 if quick else 12
     validation_sims = 48 if quick else 128
     n_candidates = 64 if quick else 128
@@ -390,10 +502,15 @@ def run_cold_start(output_dir: Path, *, quick: bool = False) -> dict:
     budgets = (3, 4, 6, 8, 12)
     n_init = 2
 
+    scenarios = build_early_detection_scenarios(
+        nx,
+        wind_coeff=wind_coeff,
+        ros_future_jitter_frac=ros_future_jitter_frac,
+        wind_coeff_future_jitter_frac=wind_coeff_future_jitter_frac,
+    )
+    env0 = next(iter(scenarios.values()))[0].env
     raw = {}
-    for scenario_index, (name, (model, state)) in enumerate(
-        build_early_detection_scenarios(nx).items()
-    ):
+    for scenario_index, (name, (model, state)) in enumerate(scenarios.items()):
         seeds = []
         for seed in range(n_seeds):
             # Each planning seed gets an independent validation ensemble, while
@@ -448,6 +565,9 @@ def run_cold_start(output_dir: Path, *, quick: bool = False) -> dict:
             "sr_setup_cost_equivalents": 1,
             "finsler_setup_cost_equivalents": 0,
             "validation_is_not_planning_information": True,
+            "wind_coeff": float(env0.wind_coeff),
+            "ros_future_jitter_frac": float(env0.ros_future_jitter_frac),
+            "wind_coeff_future_jitter_frac": float(env0.wind_coeff_future_jitter_frac),
         },
         "aggregate": _aggregate(raw, budgets),
         "raw": raw,
@@ -461,27 +581,252 @@ def run_cold_start(output_dir: Path, *, quick: bool = False) -> dict:
         summary["protocol"][f"{frame}_median_setup_wall_time_s"] = float(
             np.median(setup_times)
         )
-    output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "cold_start_summary.json").write_text(json.dumps(summary, indent=2) + "\n")
-    _plot(summary, output_dir / "cold_start_budget.png")
+    if write_artifacts:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        (output_dir / "cold_start_summary.json").write_text(
+            json.dumps(summary, indent=2) + "\n"
+        )
+        _plot(summary, output_dir / "cold_start_budget.png")
     return summary
+
+
+def _compact_aggregate(aggregate: dict) -> dict:
+    return {
+        budget: {key: value for key, value in record.items() if key != "rows"}
+        for budget, record in aggregate.items()
+    }
+
+
+def _serialise_crossover(budget: float) -> dict:
+    finite = bool(np.isfinite(budget))
+    return {
+        "crossover_budget": float(budget) if finite else None,
+        "crossover_never": not finite,
+    }
+
+
+def _plot_mechanism(summary: dict, path: Path) -> None:
+    import matplotlib.pyplot as plt
+
+    order = ("high_stochasticity", "baseline", "high_anisotropy")
+    colours = {
+        "high_stochasticity": "tab:orange",
+        "baseline": "0.25",
+        "high_anisotropy": "tab:blue",
+    }
+    fig, axes = plt.subplots(1, 2, figsize=(10.8, 4.15))
+    for name in order:
+        condition = summary["conditions"][name]
+        budgets = sorted(int(b) for b in condition["advantage_curve"])
+        advantages = np.asarray(
+            [condition["advantage_curve"][str(b)] for b in budgets], dtype=float
+        )
+        axes[0].plot(
+            budgets,
+            advantages,
+            "o-",
+            color=colours[name],
+            label=condition["label"],
+        )
+        aggregate = condition.get("aggregate")
+        if aggregate:
+            lo = np.asarray(
+                [
+                    aggregate[str(b)]["finsler_mean_advantage_ci95_percentage_points"][0]
+                    for b in budgets
+                ]
+            )
+            hi = np.asarray(
+                [
+                    aggregate[str(b)]["finsler_mean_advantage_ci95_percentage_points"][1]
+                    for b in budgets
+                ]
+            )
+            axes[0].fill_between(budgets, lo, hi, color=colours[name], alpha=0.12)
+        cross = condition["crossover_budget"]
+        if cross is not None:
+            axes[0].axvline(cross, color=colours[name], linestyle=":", linewidth=1)
+    axes[0].axhline(0.0, color="black", linewidth=1)
+    axes[0].set(
+        xlabel="Total planning budget (candidate-evaluation equivalents)",
+        ylabel="Finsler paired advantage vs SR (pp)",
+        title="Mean advantage (18 pairs; shaded 95% CI)",
+    )
+    axes[0].legend()
+    axes[0].grid(alpha=0.25)
+
+    labels = []
+    heights = []
+    bar_colours = []
+    hatches = []
+    max_budget = max(
+        int(b)
+        for condition in summary["conditions"].values()
+        for b in condition["advantage_curve"]
+    )
+    for name in order:
+        condition = summary["conditions"][name]
+        labels.append(condition["label"])
+        bar_colours.append(colours[name])
+        if condition["crossover_never"]:
+            heights.append(max_budget + 1.0)
+            hatches.append("//")
+        else:
+            heights.append(float(condition["crossover_budget"]))
+            hatches.append(None)
+    bars = axes[1].bar(labels, heights, color=bar_colours, edgecolor="black", linewidth=0.6)
+    for bar, hatch, name in zip(bars, hatches, order):
+        bar.set_hatch(hatch)
+        if summary["conditions"][name]["crossover_never"]:
+            axes[1].text(
+                bar.get_x() + bar.get_width() / 2.0,
+                bar.get_height() + 0.15,
+                "no crossing\nin [3, 12]",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+            )
+    axes[1].set(
+        ylabel="Interpolated crossover budget",
+        title="Predicted move: earlier / later",
+        ylim=(0, max_budget + 3.2),
+    )
+    baseline_cross = summary["conditions"]["baseline"]["crossover_budget"]
+    axes[1].axhline(
+        max_budget + 1.0 if baseline_cross is None else baseline_cross,
+        color="0.25",
+        linestyle="--",
+        linewidth=1,
+    )
+    held = summary["predictions"]["predicted_order_held"]
+    axes[1].text(
+        0.5,
+        0.08,
+        "predicted order held" if held else "predicted order did not hold",
+        transform=axes[1].transAxes,
+        ha="center",
+        fontsize=9,
+    )
+    axes[1].grid(axis="y", alpha=0.25)
+    fig.tight_layout()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
+def run_crossover_mechanism(output_dir: Path, *, quick: bool = False) -> dict:
+    """Move the two FireEnv knobs the mechanism names and re-estimate the crossover."""
+    n_seeds = 2 if quick else 6
+    conditions: dict[str, dict] = {}
+    crossovers: dict[str, float] = {}
+    for name, spec in MECHANISM_CONDITIONS.items():
+        print(f"running mechanism condition {name}", flush=True)
+        summary = run_cold_start(
+            output_dir / name,
+            quick=quick,
+            n_seeds=n_seeds,
+            wind_coeff=spec["wind_coeff"],
+            ros_future_jitter_frac=spec["ros_future_jitter_frac"],
+            wind_coeff_future_jitter_frac=spec["wind_coeff_future_jitter_frac"],
+        )
+        budgets, advantages = _advantage_curve(summary["aggregate"])
+        cross = interpolated_crossover(budgets, advantages)
+        conditions[name] = {
+            "label": spec["label"],
+            "prediction": spec["prediction"],
+            "knobs": {
+                "wind_coeff": spec["wind_coeff"],
+                "ros_future_jitter_frac": spec["ros_future_jitter_frac"],
+                "wind_coeff_future_jitter_frac": spec["wind_coeff_future_jitter_frac"],
+            },
+            **_serialise_crossover(cross),
+            "advantage_curve": {str(b): a for b, a in zip(budgets, advantages)},
+            "aggregate": _compact_aggregate(summary["aggregate"]),
+            "protocol": summary["protocol"],
+        }
+        crossovers[name] = cross
+        print(
+            f"  {name} crossover="
+            f"{'never' if not np.isfinite(cross) else f'{cross:.2f}'}",
+            flush=True,
+        )
+
+    predictions = crossover_predictions_held(crossovers)
+    mechanism = {
+        "claim": (
+            "If the mean-field arrival metric is why Finsler wins early, raising "
+            "simulator stochasticity should move the crossover earlier and raising "
+            "anisotropy should move it later."
+        ),
+        "protocol": {
+            "planning_seeds_per_scenario": n_seeds,
+            "quick": quick,
+            "conditions": {
+                name: {
+                    "label": spec["label"],
+                    "prediction": spec["prediction"],
+                    "knobs": {
+                        "wind_coeff": spec["wind_coeff"],
+                        "ros_future_jitter_frac": spec["ros_future_jitter_frac"],
+                        "wind_coeff_future_jitter_frac": spec[
+                            "wind_coeff_future_jitter_frac"
+                        ],
+                    },
+                }
+                for name, spec in MECHANISM_CONDITIONS.items()
+            },
+        },
+        "conditions": conditions,
+        "predictions": {
+            **predictions,
+            "crossover_budgets": {
+                name: _serialise_crossover(budget)["crossover_budget"]
+                for name, budget in crossovers.items()
+            },
+            "crossover_never": {
+                name: _serialise_crossover(budget)["crossover_never"]
+                for name, budget in crossovers.items()
+            },
+        },
+    }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "mechanism_summary.json").write_text(
+        json.dumps(mechanism, indent=2) + "\n"
+    )
+    _plot_mechanism(mechanism, output_dir / "crossover_mechanism.png")
+    return mechanism
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quick", action="store_true")
+    parser.add_argument(
+        "--mechanism",
+        action="store_true",
+        help="Sweep stochasticity and anisotropy to test where the crossover moves.",
+    )
     parser.add_argument("--output-dir", type=Path, default=Path("artifacts/cold_start"))
     args = parser.parse_args()
     matplotlib.use("Agg")
-    summary = run_cold_start(args.output_dir, quick=args.quick)
-    compact = {
-        budget: {
-            key: value
-            for key, value in record.items()
-            if key != "rows"
+    if args.mechanism:
+        summary = run_crossover_mechanism(
+            args.output_dir / "mechanism",
+            quick=args.quick,
+        )
+        compact = {
+            "predictions": summary["predictions"],
+            "crossovers": {
+                name: {
+                    "crossover_budget": condition["crossover_budget"],
+                    "crossover_never": condition["crossover_never"],
+                    "advantage_curve": condition["advantage_curve"],
+                }
+                for name, condition in summary["conditions"].items()
+            },
         }
-        for budget, record in summary["aggregate"].items()
-    }
+    else:
+        summary = run_cold_start(args.output_dir, quick=args.quick)
+        compact = _compact_aggregate(summary["aggregate"])
     print(json.dumps(compact, indent=2))
 
 
