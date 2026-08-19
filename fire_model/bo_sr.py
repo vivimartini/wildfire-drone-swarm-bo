@@ -7,6 +7,7 @@ from sklearn.gaussian_process.kernels import ConstantKernel, Hyperparameter, Mat
 from scipy.spatial import cKDTree
 
 from fire_model.ca import CAFireModel, FireState
+from fire_model.finsler import FinslerWarp, TiedFinslerMatern
 
 
 def expected_improvement(X_candidates, gp, y_best, xi=0.01):
@@ -169,6 +170,8 @@ class RetardantDropBayesOptSR:
         self.sr_valid_mask: np.ndarray | None = None
         self.sr_index_tree: cKDTree | None = None
         self.sr_valid_indices: np.ndarray | None = None
+
+        self.finsler_warp: FinslerWarp | None = None
 
     @staticmethod
     def _unit(v: np.ndarray, eps: float = 1e-12) -> np.ndarray:
@@ -549,13 +552,75 @@ class RetardantDropBayesOptSR:
             )
         return np.asarray(feats, dtype=float)
 
+    def setup_finsler_frame(
+        self,
+        *,
+        neighbourhood: int = 16,
+        ros_mps: float | np.ndarray | None = None,
+        wind_coeff: float | None = None,
+        max_wind_ratio: float = 0.95,
+        verbose: bool = False,
+    ) -> FinslerWarp:
+        """Fit the Randers metric implied by the CA and solve for arrival time.
+
+        The metric is fitted to the simulator's own directional spread law, so
+        the anisotropy the surrogate sees is derived from the model physics
+        rather than imposed by hand. Arrival time is then the Finsler distance
+        from the current perimeter, and is what the `finsler` kernel frame warps
+        into feature space. Uses the environment's base spread parameters, not
+        the per-realisation jittered ones.
+        """
+        env = self.fire_model.env
+        warp = FinslerWarp.from_firestate(
+            env,
+            self.init_firestate,
+            ros_mps=env.ros_mps if ros_mps is None else ros_mps,
+            wind_coeff=env.wind_coeff if wind_coeff is None else wind_coeff,
+            neighbourhood=neighbourhood,
+            max_wind_ratio=max_wind_ratio,
+        )
+        self.finsler_warp = warp
+        if verbose:
+            info = warp.describe()
+            print(
+                f"[BO SR] Finsler frame: |b|_a median="
+                f"{info['metric']['wind_ratio_b_norm']['median']:.3f}, "
+                f"strongly convex={info['metric']['strongly_convex']}, "
+                f"metric fit residual={info['metric']['fit_residual_median']:.3f}, "
+                f"median |asymmetry|={info['median_abs_asymmetry']:.3f}"
+            )
+        return warp
+
+    def theta_to_finsler_gp_features(self, theta: np.ndarray) -> np.ndarray:
+        """Warp drops through the Finsler arrival-time field into kernel space.
+
+        Each drone contributes six features (see :class:`FinslerWarp`), of which
+        the first two are the forward and reverse arrival times. Keeping both
+        directed distances is what lets a symmetric, positive-definite kernel
+        represent an asymmetric geometry: the Finsler distance itself cannot be
+        substituted into a Matern kernel, because it satisfies neither symmetry
+        nor positive definiteness, and symmetrising it would discard exactly the
+        upwind/downwind information that motivated the metric.
+        """
+        if self.finsler_warp is None:
+            self.setup_finsler_frame()
+        params = self.decode_theta(theta)
+        return self.finsler_warp.features(params).ravel()
+
+    def _gp_feature_dim(self, kernel_frame: str) -> int:
+        """Number of GP input features for a given frame."""
+        per_drone = FinslerWarp.N_FEATURES if str(kernel_frame).lower().strip() == "finsler" else 4
+        return per_drone * self.n_drones
+
     def _gp_features(self, theta: np.ndarray, kernel_frame: str) -> np.ndarray:
         frame = str(kernel_frame).lower().strip()
         if frame == "wind":
             return self.theta_to_wind_gp_features(theta)
         if frame == "sr":
             return self.theta_to_gp_features(theta)
-        raise ValueError("kernel_frame must be 'wind' or 'sr'")
+        if frame == "finsler":
+            return self.theta_to_finsler_gp_features(theta)
+        raise ValueError("kernel_frame must be 'wind', 'sr' or 'finsler'")
 
     @staticmethod
     def _sr_arc_length(boundary_xy: np.ndarray) -> np.ndarray:
@@ -1490,14 +1555,18 @@ class RetardantDropBayesOptSR:
             print(f"[BO SR] init: best_y={best0:.6g}, mean_y={float(np.mean(y)):.6g}, std_y={float(np.std(y)):.6g}")
 
         kernel_frame = str(kernel_frame).lower().strip()
-        if kernel_frame not in {"wind", "sr"}:
-            raise ValueError("kernel_frame must be 'wind' or 'sr'")
+        if kernel_frame not in {"wind", "sr", "finsler"}:
+            raise ValueError("kernel_frame must be 'wind', 'sr' or 'finsler'")
         if use_ard_kernel:
             base_kernel = Matern(
                 length_scale=np.ones(X.shape[1], dtype=float),
                 nu=2.5,
                 length_scale_bounds=(1e-3, 1e3),
             )
+        elif kernel_frame == "finsler":
+            # Stationary Matern on a deterministic warp of the arrival-time
+            # field: positive definite by construction, anisotropic by physics.
+            base_kernel = TiedFinslerMatern(nu=2.5, length_scale_bounds=(1e-3, 1e3))
         elif kernel_frame == "wind":
             # Distinct along-/cross-wind scales make the covariance anisotropic;
             # the feature rotation above ties those axes to the observed wind.
@@ -1692,12 +1761,18 @@ class RetardantDropBayesOptSR:
                 self.plot_sr_domain()
 
         kernel_frame = str(kernel_frame).lower().strip()
-        if kernel_frame not in {"wind", "sr"}:
-            raise ValueError("kernel_frame must be 'wind' or 'sr'")
+        if kernel_frame not in {"wind", "sr", "finsler"}:
+            raise ValueError("kernel_frame must be 'wind', 'sr' or 'finsler'")
 
         def _make_kernel():
             if use_ard_kernel:
-                base = Matern(length_scale=np.ones(4 * self.n_drones, dtype=float), nu=2.5, length_scale_bounds=(1e-3, 1e3))
+                base = Matern(
+                    length_scale=np.ones(self._gp_feature_dim(kernel_frame), dtype=float),
+                    nu=2.5,
+                    length_scale_bounds=(1e-3, 1e3),
+                )
+            elif kernel_frame == "finsler":
+                base = TiedFinslerMatern(nu=2.5, length_scale_bounds=(1e-3, 1e3))
             elif str(kernel_frame).lower().strip() == "wind":
                 base = Matern(
                     length_scale=np.tile([0.35, 0.15, 0.5, 0.5], self.n_drones),
@@ -1760,11 +1835,11 @@ class RetardantDropBayesOptSR:
             ],
             dtype=float,
         )
-        X_low = np.vstack([self._gp_features(th, kernel_frame) for th in X_theta_low]) if len(X_theta_low) > 0 else np.empty((0, 4 * self.n_drones))
+        X_low = np.vstack([self._gp_features(th, kernel_frame) for th in X_theta_low]) if len(X_theta_low) > 0 else np.empty((0, self._gp_feature_dim(kernel_frame)))
 
         X_theta_high = np.atleast_2d(_sample_init_thetas(n_init_high))
         y_high = np.array([self.objective_value(th, seed=eval_seed, fidelity="high") for th in X_theta_high], dtype=float)
-        X_high = np.vstack([self._gp_features(th, kernel_frame) for th in X_theta_high]) if len(X_theta_high) > 0 else np.empty((0, 4 * self.n_drones))
+        X_high = np.vstack([self._gp_features(th, kernel_frame) for th in X_theta_high]) if len(X_theta_high) > 0 else np.empty((0, self._gp_feature_dim(kernel_frame)))
 
         y_nexts_high: list[float] = list(y_high.tolist())
         y_bests_high: list[float] = [float(np.min(y_high))] if len(y_high) > 0 else []
@@ -2112,6 +2187,7 @@ class RetardantDropBayesOptSR:
 
 __all__ = [
     "TiedSRDeltaMatern",
+    "TiedFinslerMatern",
     "RetardantDropBayesOptSR",
     "expected_improvement",
 ]

@@ -28,6 +28,7 @@ class FireEnv:
     drop_amount: float = 1.0
     ros_mps: float | np.ndarray = 0.5  # scalar by default; optionally time-varying (T,) or (T,nx,ny)
     wind_coeff: float = 0.6
+    wind_response: str = "clipped"  # "clipped" (legacy) or "elliptical" (Richards/Randers; needs wind_coeff*|wind| < 1)
     slope: np.ndarray | None = None  # optional (nx, ny, 2) slope vectors
     diag: bool = True
     avoid_burning_drop: bool = True  # whether to avoid dropping retardant on burning cells
@@ -207,6 +208,10 @@ class CAFireModel:
         retardant_attn = np.exp(-k * np.maximum(state.retardant, 0.0))
 
         wind_arr = np.asarray(wind_coeff, dtype=float)
+        wind_response = str(getattr(env, "wind_response", "clipped")).lower().strip()
+        if wind_response not in {"clipped", "elliptical"}:
+            raise ValueError("wind_response must be 'clipped' or 'elliptical'")
+
         for sx, sy in dirs:
             src = self._shift_no_wrap(burning, sx, sy)
             if not np.any(src):
@@ -217,11 +222,34 @@ class CAFireModel:
 
             align = wx * ux + wy * uy
             if wind_arr.ndim == 0:
-                bias = 1.0 + float(wind_arr) * np.maximum(0.0, align)
+                c = float(wind_arr)
             else:
                 if wind_arr.shape[0] != n_sims:
                     raise ValueError("wind_coeff array must have length equal to n_sims.")
-                bias = 1.0 + wind_arr.reshape(n_sims, 1, 1) * np.maximum(0.0, align)
+                c = wind_arr.reshape(n_sims, 1, 1)
+
+            if wind_response == "clipped":
+                # Wind only ever helps, so the fire backs into the wind at its
+                # no-wind rate and the flank and rear rates are identical.
+                bias = 1.0 + c * np.maximum(0.0, align)
+            else:
+                # Richards' elliptical growth: the set of displacements reachable
+                # in unit time is the no-wind circle translated by the wind drift.
+                # Writing that circle as a rate in direction u gives
+                #     sigma(u) / ros = c (w.u) + sqrt(1 - c^2|w|^2 + c^2 (w.u)^2),
+                # which is the radial function of a Randers indicatrix -- note it
+                # is NOT 1 + c (w.u); that linear form is only its first-order
+                # expansion and overstates the flank rate badly once c|w| grows.
+                # Head and backing rates are unchanged at 1 +/- c|w|; the flank
+                # rate drops to sqrt(1 - c^2|w|^2), which is the ellipse
+                # narrowing as the wind stretches it.
+                cw2 = (c * wx) ** 2 + (c * wy) ** 2
+                drift_along = c * align
+                bias = drift_along + np.sqrt(np.maximum(1.0 - cw2 + drift_along ** 2, 1e-6))
+            # Sub-critical wind (wind_coeff * |wind| < 1) keeps this positive; the
+            # floor only guards pathological inputs, where the metric would stop
+            # being strongly convex anyway.
+            bias = np.maximum(bias, 1e-3)
 
             lambda_dir = (lambda0 / dist) * fuel_mul * bias
             if env.slope is not None:

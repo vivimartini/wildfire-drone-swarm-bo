@@ -17,6 +17,19 @@ from fire_model.harmonic import (
 )
 from fire_model.bo import RetardantDropBayesOpt, SearchGridProjector, TiedXYFiMatern, expected_improvement
 from fire_model.bo_sr import RetardantDropBayesOptSR, TiedSRDeltaMatern
+from fire_model.finsler import (
+    ArrivalField,
+    FinslerWarp,
+    RandersField,
+    TiedFinslerMatern,
+    arrival_time,
+    ca_directional_speed,
+    directed_distance_matrix,
+    fit_randers_profile,
+    geodesic_path,
+    naive_symmetrised_gram,
+    randers_from_env,
+)
 
 __all__ = [
     "CAFireModel",
@@ -40,4 +53,15 @@ __all__ = [
     "expected_improvement",
     "RetardantDropBayesOptSR",
     "TiedSRDeltaMatern",
+    "RandersField",
+    "ArrivalField",
+    "FinslerWarp",
+    "TiedFinslerMatern",
+    "randers_from_env",
+    "ca_directional_speed",
+    "fit_randers_profile",
+    "arrival_time",
+    "geodesic_path",
+    "directed_distance_matrix",
+    "naive_symmetrised_gram",
 ]

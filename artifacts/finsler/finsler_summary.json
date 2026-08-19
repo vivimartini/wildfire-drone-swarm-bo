@@ -1,0 +1,423 @@
+{
+  "scenario": {
+    "grid": 48,
+    "ca_realisations": 64,
+    "horizon_s": 3000.0,
+    "wind_response": "elliptical"
+  },
+  "metric": {
+    "grid_size": [
+      48,
+      48
+    ],
+    "dx_m": 83.33333333333333,
+    "speed_mps": {
+      "min": 0.6999999999999995,
+      "median": 0.6999999999999995,
+      "max": 0.6999999999999995
+    },
+    "wind_ratio_b_norm": {
+      "median": 0.8000000000000005,
+      "max": 0.8000000000000005
+    },
+    "strongly_convex": true,
+    "drift_clipped_fraction": 0.0,
+    "fit_residual_median": 5.511568840295523e-16
+  },
+  "warp": {
+    "metric": {
+      "grid_size": [
+        48,
+        48
+      ],
+      "dx_m": 83.33333333333333,
+      "speed_mps": {
+        "min": 0.6999999999999995,
+        "median": 0.6999999999999995,
+        "max": 0.6999999999999995
+      },
+      "wind_ratio_b_norm": {
+        "median": 0.8000000000000005,
+        "max": 0.8000000000000005
+      },
+      "strongly_convex": true,
+      "drift_clipped_fraction": 0.0,
+      "fit_residual_median": 5.511568840295523e-16
+    },
+    "time_scale_s": 4264.066734261918,
+    "reachable_cells": 2304,
+    "median_abs_asymmetry": 0.5769047906821809,
+    "max_abs_asymmetry": 0.7085038272112529,
+    "n_features_per_drone": 6
+  },
+  "arrival_time_fits": [
+    {
+      "name": "finsler",
+      "calibration_factor": 0.35397402909060144,
+      "r2_through_origin": 0.3415731709347145,
+      "spearman_rho": 0.8996755775246121,
+      "n_cells": 2295
+    },
+    {
+      "name": "isotropic",
+      "calibration_factor": 0.3739772967150457,
+      "r2_through_origin": 0.40995464790492764,
+      "spearman_rho": 0.7283512866672316,
+      "n_cells": 2295
+    }
+  ],
+  "wind_sweep": [
+    {
+      "wind_response": "clipped",
+      "wind_coeff": 0.2,
+      "b_norm_a": 0.09401935048464809,
+      "metric_fit_residual": 0.028958399929539854,
+      "drift_clipped_fraction": 0.0,
+      "subunit_wind": true,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.4067090164611911,
+        "r2_through_origin": 0.99348081616371,
+        "spearman_rho": 0.9970192646316711,
+        "n_cells": 2295
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.39028745706314816,
+        "r2_through_origin": 0.9874013228946794,
+        "spearman_rho": 0.9977051814875466,
+        "n_cells": 2295
+      }
+    },
+    {
+      "wind_response": "clipped",
+      "wind_coeff": 0.4,
+      "b_norm_a": 0.17742739059365545,
+      "metric_fit_residual": 0.054285719405726185,
+      "drift_clipped_fraction": 0.0,
+      "subunit_wind": true,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.4252631049583046,
+        "r2_through_origin": 0.9788145679520773,
+        "spearman_rho": 0.9885112833793085,
+        "n_cells": 2295
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.39705503562672523,
+        "r2_through_origin": 0.9724115241217608,
+        "spearman_rho": 0.9924619806924126,
+        "n_cells": 2295
+      }
+    },
+    {
+      "wind_response": "clipped",
+      "wind_coeff": 0.8,
+      "b_norm_a": 0.31886653270929927,
+      "metric_fit_residual": 0.09561888854108336,
+      "drift_clipped_fraction": 0.0,
+      "subunit_wind": true,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.45390822342015635,
+        "r2_through_origin": 0.909174991902598,
+        "spearman_rho": 0.9490603413569191,
+        "n_cells": 2295
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.41318957040767246,
+        "r2_through_origin": 0.9313296679240971,
+        "spearman_rho": 0.9762839209546766,
+        "n_cells": 2295
+      }
+    },
+    {
+      "wind_response": "clipped",
+      "wind_coeff": 1.6,
+      "b_norm_a": 0.5301922304509157,
+      "metric_fit_residual": 0.15154029862677024,
+      "drift_clipped_fraction": 0.0,
+      "subunit_wind": true,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.4873636787138789,
+        "r2_through_origin": 0.5803241415348204,
+        "spearman_rho": 0.8320148024148634,
+        "n_cells": 2295
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.45756997688175854,
+        "r2_through_origin": 0.8547217735068469,
+        "spearman_rho": 0.9444366385806728,
+        "n_cells": 2295
+      }
+    },
+    {
+      "wind_response": "clipped",
+      "wind_coeff": 3.0,
+      "b_norm_a": 0.7675922373491345,
+      "metric_fit_residual": 0.20395484665099384,
+      "drift_clipped_fraction": 0.0,
+      "subunit_wind": true,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.49970376546387485,
+        "r2_through_origin": -0.15843758896004312,
+        "spearman_rho": 0.7499676296025177,
+        "n_cells": 2295
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.545597709481111,
+        "r2_through_origin": 0.7503560224959309,
+        "spearman_rho": 0.8975567425488037,
+        "n_cells": 2295
+      }
+    },
+    {
+      "wind_response": "elliptical",
+      "wind_coeff": 0.2,
+      "b_norm_a": 0.1999999999999999,
+      "metric_fit_residual": 5.186206775663095e-16,
+      "drift_clipped_fraction": 0.0,
+      "subunit_wind": true,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.40235082287098967,
+        "r2_through_origin": 0.972482901543128,
+        "spearman_rho": 0.9850196534118557,
+        "n_cells": 2295
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.3734577875290691,
+        "r2_through_origin": 0.9673902391418852,
+        "spearman_rho": 0.9908212558521843,
+        "n_cells": 2295
+      }
+    },
+    {
+      "wind_response": "elliptical",
+      "wind_coeff": 0.4,
+      "b_norm_a": 0.4,
+      "metric_fit_residual": 4.704910689187023e-16,
+      "drift_clipped_fraction": 0.0,
+      "subunit_wind": true,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.4040787767076508,
+        "r2_through_origin": 0.8493386031882979,
+        "spearman_rho": 0.9208936188344449,
+        "n_cells": 2295
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.3669003272208409,
+        "r2_through_origin": 0.8873081637201172,
+        "spearman_rho": 0.9582194026664672,
+        "n_cells": 2295
+      }
+    },
+    {
+      "wind_response": "elliptical",
+      "wind_coeff": 0.8,
+      "b_norm_a": 0.8000000000000005,
+      "metric_fit_residual": 5.511568840295523e-16,
+      "drift_clipped_fraction": 0.0,
+      "subunit_wind": true,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.35397402909060144,
+        "r2_through_origin": 0.3415731709347145,
+        "spearman_rho": 0.8996755775246121,
+        "n_cells": 2295
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.3739772967150457,
+        "r2_through_origin": 0.40995464790492764,
+        "spearman_rho": 0.7283512866672316,
+        "n_cells": 2295
+      }
+    },
+    {
+      "wind_response": "elliptical",
+      "wind_coeff": 1.6,
+      "b_norm_a": 0.95,
+      "metric_fit_residual": 0.09372808854127775,
+      "drift_clipped_fraction": 1.0,
+      "subunit_wind": false,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.6527392419059777,
+        "r2_through_origin": 0.48514927382930495,
+        "spearman_rho": 0.8575738798132486,
+        "n_cells": 1653
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.3748907753545433,
+        "r2_through_origin": -0.10095331833515897,
+        "spearman_rho": 0.5729994649804548,
+        "n_cells": 1653
+      }
+    },
+    {
+      "wind_response": "elliptical",
+      "wind_coeff": 3.0,
+      "b_norm_a": 0.95,
+      "metric_fit_residual": 0.18597570034206806,
+      "drift_clipped_fraction": 1.0,
+      "subunit_wind": false,
+      "finsler": {
+        "name": "finsler",
+        "calibration_factor": 0.8186476079137001,
+        "r2_through_origin": 0.41715864274625325,
+        "spearman_rho": 0.8382631972759427,
+        "n_cells": 1653
+      },
+      "isotropic": {
+        "name": "isotropic",
+        "calibration_factor": 0.46470035930403364,
+        "r2_through_origin": -0.1406982679151867,
+        "spearman_rho": 0.5453153145690054,
+        "n_cells": 1653
+      }
+    }
+  ],
+  "positive_definiteness": {
+    "n_points": 16,
+    "directed_distance_is_symmetric": false,
+    "max_relative_asymmetry": 1.4170076544225056,
+    "substituted": {
+      "mean": {
+        "min_eigenvalue": -0.004534363859537075,
+        "is_psd": false
+      },
+      "min": {
+        "min_eigenvalue": -0.09269674054768677,
+        "is_psd": false
+      },
+      "max": {
+        "min_eigenvalue": 0.006928878259305766,
+        "is_psd": true
+      }
+    },
+    "warped": {
+      "min_eigenvalue": 0.04182877270802341,
+      "is_psd": true,
+      "is_symmetric": true
+    }
+  },
+  "kernel_frame_comparison": {
+    "clipped": {
+      "no_drop_cvar": 10.387286324786325,
+      "per_frame": {
+        "wind": {
+          "cvar_by_seed": [
+            8.29647435897436,
+            9.199252136752138,
+            8.969551282051281,
+            8.130876068376066,
+            8.412393162393162
+          ],
+          "mean": 8.601709401709403,
+          "std": 0.41062344470229406,
+          "best": 8.130876068376066
+        },
+        "sr": {
+          "cvar_by_seed": [
+            8.55395299145299,
+            8.41292735042735,
+            7.672542735042733,
+            8.028311965811968,
+            7.622863247863247
+          ],
+          "mean": 8.058119658119656,
+          "std": 0.377026629766288,
+          "best": 7.622863247863247
+        },
+        "finsler": {
+          "cvar_by_seed": [
+            8.559829059829058,
+            8.587606837606836,
+            8.893696581196581,
+            8.830128205128204,
+            9.096153846153845
+          ],
+          "mean": 8.793482905982906,
+          "std": 0.1999872156042554,
+          "best": 8.559829059829058
+        }
+      },
+      "paired_vs_finsler": {
+        "wind": {
+          "mean_difference": 0.19177350427350354,
+          "finsler_wins": 2,
+          "n_seeds": 5
+        },
+        "sr": {
+          "mean_difference": 0.7353632478632475,
+          "finsler_wins": 0,
+          "n_seeds": 5
+        }
+      }
+    },
+    "elliptical": {
+      "no_drop_cvar": 8.362713675213675,
+      "per_frame": {
+        "wind": {
+          "cvar_by_seed": [
+            6.903311965811965,
+            6.37232905982906,
+            5.803418803418802,
+            7.0122863247863245,
+            7.042200854700853
+          ],
+          "mean": 6.626709401709401,
+          "std": 0.477562238280076,
+          "best": 5.803418803418802
+        },
+        "sr": {
+          "cvar_by_seed": [
+            6.370726495726497,
+            4.960470085470084,
+            5.626602564102564,
+            6.749465811965811,
+            6.490384615384615
+          ],
+          "mean": 6.039529914529913,
+          "std": 0.6560257962258464,
+          "best": 4.960470085470084
+        },
+        "finsler": {
+          "cvar_by_seed": [
+            7.011217948717948,
+            7.49145299145299,
+            7.32318376068376,
+            4.960470085470084,
+            7.042200854700853
+          ],
+          "mean": 6.765705128205127,
+          "std": 0.9201187290783985,
+          "best": 4.960470085470084
+        }
+      },
+      "paired_vs_finsler": {
+        "wind": {
+          "mean_difference": 0.13899572649572606,
+          "finsler_wins": 1,
+          "n_seeds": 5
+        },
+        "sr": {
+          "mean_difference": 0.7261752136752129,
+          "finsler_wins": 1,
+          "n_seeds": 5
+        }
+      }
+    }
+  }
+}
