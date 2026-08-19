@@ -19,6 +19,7 @@ from fire_model.bo import RetardantDropBayesOpt, SearchGridProjector, TiedXYFiMa
 from fire_model.bo_sr import RetardantDropBayesOptSR, TiedSRDeltaMatern
 from fire_model.finsler import (
     ArrivalField,
+    FinslerSearchMap,
     FinslerWarp,
     RandersField,
     TiedFinslerMatern,
@@ -55,6 +56,7 @@ __all__ = [
     "TiedSRDeltaMatern",
     "RandersField",
     "ArrivalField",
+    "FinslerSearchMap",
     "FinslerWarp",
     "TiedFinslerMatern",
     "randers_from_env",

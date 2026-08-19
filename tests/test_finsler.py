@@ -12,6 +12,7 @@ from dataclasses import replace
 from fire_model.bo_sr import RetardantDropBayesOptSR
 from fire_model.ca import CAFireModel, FireEnv, FireState
 from fire_model.finsler import (
+    FinslerSearchMap,
     FinslerWarp,
     RandersField,
     TiedFinslerMatern,
@@ -389,6 +390,64 @@ def test_finsler_frame_is_built_lazily_and_reused():
 
     optimizer._gp_features(np.full(optimizer.dim, 0.2), "finsler")
     assert optimizer.finsler_warp is warp
+
+
+def test_native_finsler_search_decodes_without_an_sr_front():
+    optimizer = make_optimizer()
+    search = optimizer.setup_search_grid_finsler()
+    optimizer.search_frame = "finsler"
+
+    params = optimizer.decode_theta(np.array([0.25, 0.6, 0.4]))
+
+    assert isinstance(search, FinslerSearchMap)
+    assert optimizer.sr_grid is None
+    assert optimizer.final_search_firestate is None
+    assert search.describe()["setup_rollout_steps"] == 0
+    assert params.shape == (1, 3)
+    assert search.mask[int(params[0, 0]), int(params[0, 1])]
+
+
+def test_native_finsler_bo_never_builds_the_monte_carlo_front(monkeypatch):
+    optimizer = make_optimizer()
+
+    def fail_if_called(**kwargs):
+        raise AssertionError("SR setup was charged to a supposedly front-free arm")
+
+    monkeypatch.setattr(optimizer, "setup_search_grid_sr", fail_if_called)
+    result = optimizer.run_bayes_opt(
+        n_init=2,
+        n_iters=1,
+        n_candidates=16,
+        verbose=False,
+        kernel_frame="finsler",
+        search_frame="finsler",
+        eval_seed=3,
+    )
+
+    assert optimizer.sr_grid is None
+    assert optimizer.finsler_search_map is not None
+    assert np.isfinite(result[2])
+
+
+def test_corrected_sr_orientation_removes_the_duplicate_half_turn():
+    optimizer = make_optimizer()
+    optimizer.setup_search_grid_sr(K=40, n_r=20, smooth_iters=10)
+    theta_a = np.array([0.3, 0.5, 0.2])
+    theta_b = np.array([0.3, 0.5, 1.2])
+
+    # In the corrected parameterisation, adding one normalised period gives the
+    # same rectangle and the same GP features. The benchmark enables this for
+    # both arms so Finsler cannot win by exploiting an avoidable SR redundancy.
+    optimizer.orientation_period_pi = True
+    params_a = optimizer.decode_theta(theta_a)
+    params_b = optimizer.decode_theta(theta_b)
+    assert params_a[:, :2] == pytest.approx(params_b[:, :2], abs=1e-12)
+    assert np.mod(params_a[:, 2] - params_b[:, 2], np.pi) == pytest.approx(
+        0.0, abs=1e-12
+    )
+    assert optimizer.theta_to_gp_features(theta_a) == pytest.approx(
+        optimizer.theta_to_gp_features(theta_b), abs=1e-12
+    )
 
 
 def test_unknown_kernel_frame_is_rejected():

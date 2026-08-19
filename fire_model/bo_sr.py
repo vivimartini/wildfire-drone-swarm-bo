@@ -7,7 +7,7 @@ from sklearn.gaussian_process.kernels import ConstantKernel, Hyperparameter, Mat
 from scipy.spatial import cKDTree
 
 from fire_model.ca import CAFireModel, FireState
-from fire_model.finsler import FinslerWarp, TiedFinslerMatern
+from fire_model.finsler import FinslerSearchMap, FinslerWarp, TiedFinslerMatern
 
 
 def expected_improvement(X_candidates, gp, y_best, xi=0.01):
@@ -172,6 +172,9 @@ class RetardantDropBayesOptSR:
         self.sr_valid_indices: np.ndarray | None = None
 
         self.finsler_warp: FinslerWarp | None = None
+        self.finsler_search_map: FinslerSearchMap | None = None
+        self.search_frame = "sr"
+        self.orientation_period_pi = False
 
     @staticmethod
     def _unit(v: np.ndarray, eps: float = 1e-12) -> np.ndarray:
@@ -467,26 +470,33 @@ class RetardantDropBayesOptSR:
 
     def decode_theta_sr(self, theta: np.ndarray) -> np.ndarray:
         theta = np.asarray(theta, dtype=float)
+        period = np.pi if self.orientation_period_pi else 2.0 * np.pi
         params = []
         for d in range(self.n_drones):
             s = float(theta[3 * d + 0])
             r = float(theta[3 * d + 1])
-            delta = float(theta[3 * d + 2]) * (2.0 * np.pi)
+            delta = float(theta[3 * d + 2]) * period
             params.append((s, r, delta))
         params = np.array(params, dtype=float)
         order = np.lexsort((params[:, 2], params[:, 1], params[:, 0]))
         return params[order]
 
     def decode_theta(self, theta: np.ndarray) -> np.ndarray:
+        if self.search_frame == "finsler":
+            if self.finsler_search_map is None:
+                raise RuntimeError("Call setup_search_grid_finsler(...) before decode_theta.")
+            return self.finsler_search_map.decode(theta, self.n_drones)
+
         if self.sr_grid is None:
             raise RuntimeError("Call setup_search_grid_sr(...) before decode_theta.")
 
         theta = np.asarray(theta, dtype=float)
+        period = np.pi if self.orientation_period_pi else 2.0 * np.pi
         params = []
         for d in range(self.n_drones):
             s = float(theta[3 * d + 0])
             r = float(theta[3 * d + 1])
-            delta = float(theta[3 * d + 2]) * (2.0 * np.pi)
+            delta = float(theta[3 * d + 2]) * period
 
             xy, phi_r = self._sr_lookup(s, r)
             # Align delta=0 with the tangent (constant-r) direction.
@@ -511,12 +521,14 @@ class RetardantDropBayesOptSR:
 
     def theta_to_gp_features(self, theta: np.ndarray) -> np.ndarray:
         theta = np.asarray(theta, dtype=float)
+        period = np.pi if self.orientation_period_pi else 2.0 * np.pi
         feats = []
         for d in range(self.n_drones):
             s = float(theta[3 * d + 0])
             r = float(theta[3 * d + 1])
-            delta = float(theta[3 * d + 2]) * (2.0 * np.pi)
-            feats.extend([s, r, np.sin(delta), np.cos(delta)])
+            delta = float(theta[3 * d + 2]) * period
+            angle = 2.0 * delta if self.orientation_period_pi else delta
+            feats.extend([s, r, np.sin(angle), np.cos(angle)])
         return np.asarray(feats, dtype=float)
 
     def theta_to_wind_gp_features(self, theta: np.ndarray) -> np.ndarray:
@@ -590,6 +602,54 @@ class RetardantDropBayesOptSR:
                 f"median |asymmetry|={info['median_abs_asymmetry']:.3f}"
             )
         return warp
+
+    def setup_search_grid_finsler(
+        self,
+        *,
+        min_arrival_time_s: float | None = None,
+        max_arrival_time_s: float | None = None,
+        neighbourhood: int = 16,
+        max_wind_ratio: float = 0.95,
+        verbose: bool = False,
+    ) -> FinslerSearchMap:
+        """Build a search map without a Monte-Carlo future-front rollout.
+
+        The actionable region is the deterministic Finsler arrival-time band
+        from one CA step ahead to the planning horizon.  Unlike
+        :meth:`setup_search_grid_sr`, this consumes zero simulator rollout
+        steps: it needs only the observed fire state and the environment's
+        spread parameters.
+        """
+        if self.finsler_warp is None:
+            self.setup_finsler_frame(
+                neighbourhood=neighbourhood,
+                max_wind_ratio=max_wind_ratio,
+                verbose=verbose,
+            )
+        if min_arrival_time_s is None:
+            min_arrival_time_s = float(self.fire_model.env.dt_s)
+        if max_arrival_time_s is None:
+            max_arrival_time_s = float(
+                self.evolution_time_s
+                if self.search_grid_evolution_time_s is None
+                else self.search_grid_evolution_time_s
+            )
+        search = FinslerSearchMap(
+            self.finsler_warp,
+            min_time_s=float(min_arrival_time_s),
+            max_time_s=float(max_arrival_time_s),
+        )
+        self.finsler_search_map = search
+        self.search_domain_mask = search.mask
+        self.shape = search.mask.shape
+        if verbose:
+            info = search.describe()
+            print(
+                f"[BO Finsler] front-free search: {info['candidate_cells']} cells, "
+                f"arrival window={info['min_time_s']:.0f}-{info['max_time_s']:.0f}s, "
+                "setup rollout steps=0"
+            )
+        return search
 
     def theta_to_finsler_gp_features(self, theta: np.ndarray) -> np.ndarray:
         """Warp drops through the Finsler arrival-time field into kernel space.
@@ -1410,6 +1470,10 @@ class RetardantDropBayesOptSR:
         print_every: int = 1,
         use_ard_kernel: bool = False,
         kernel_frame: str = "wind",
+        search_frame: str = "sr",
+        orientation_period_pi: bool = False,
+        finsler_min_arrival_time_s: float | None = None,
+        finsler_max_arrival_time_s: float | None = None,
         init_strategy: str = "random",  # "random", "random_mask", "heuristic"
         init_heuristic_random_frac: float = 0.2,
         init_heuristic_kwargs: dict | None = None,
@@ -1444,7 +1508,17 @@ class RetardantDropBayesOptSR:
         eval_seed: int | None = None,
         use_mfbo: bool = False,
         mf_options: dict | None = None,
+        return_theta_history: bool = False,
     ):
+        search_frame = str(search_frame).lower().strip()
+        if search_frame not in {"sr", "finsler"}:
+            raise ValueError("search_frame must be 'sr' or 'finsler'")
+        if use_mfbo and search_frame != "sr":
+            raise ValueError("native Finsler search is currently supported by single-fidelity BO only")
+        self.search_frame = search_frame
+        self.orientation_period_pi = bool(orientation_period_pi)
+        init_strategy_normalized = str(init_strategy).lower().strip()
+
         if use_mfbo:
             mf_options = {} if mf_options is None else dict(mf_options)
             return self.run_bayes_opt_mf(
@@ -1497,7 +1571,18 @@ class RetardantDropBayesOptSR:
                 **mf_options,
             )
 
-        if self.sr_grid is None:
+        if search_frame == "finsler":
+            if init_strategy_normalized != "random":
+                raise ValueError("native Finsler search currently supports random initialisation")
+            if candidate_global_masked or str(candidate_strategy).lower().strip() == "random_mask":
+                raise ValueError("native Finsler search does not use the SR mask sampler")
+            if self.finsler_search_map is None:
+                self.setup_search_grid_finsler(
+                    min_arrival_time_s=finsler_min_arrival_time_s,
+                    max_arrival_time_s=finsler_max_arrival_time_s,
+                    verbose=verbose,
+                )
+        elif self.sr_grid is None:
             self.setup_search_grid_sr(
                 K=K_grid,
                 boundary_field=boundary_field,
@@ -1676,7 +1761,30 @@ class RetardantDropBayesOptSR:
             print(f"[BO SR] done: best_y={best_y:.6g}")
             print(f"[BO SR] best params:\n{best_params}")
 
-        return best_theta, best_params, best_y, (X, y), y_nexts, y_bests
+        result = (best_theta, best_params, best_y, (X, y), y_nexts, y_bests)
+        if return_theta_history:
+            history = {
+                "theta": np.asarray(X_theta, dtype=float).copy(),
+                "objective": np.asarray(y, dtype=float).copy(),
+                "search_frame": search_frame,
+                "setup_rollout_steps": (
+                    0
+                    if search_frame == "finsler"
+                    else self.n_sims
+                    * int(
+                        np.ceil(
+                            (
+                                self.evolution_time_s
+                                if self.search_grid_evolution_time_s is None
+                                else self.search_grid_evolution_time_s
+                            )
+                            / float(self.fire_model.env.dt_s)
+                        )
+                    )
+                ),
+            }
+            return result + (history,)
+        return result
 
     def run_bayes_opt_mf(
         self,

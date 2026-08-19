@@ -12,17 +12,17 @@
     ],
     "dx_m": 83.33333333333333,
     "speed_mps": {
-      "min": 0.6999999999999995,
-      "median": 0.6999999999999995,
-      "max": 0.6999999999999995
+      "min": 0.699999999999995,
+      "median": 0.699999999999995,
+      "max": 0.699999999999995
     },
     "wind_ratio_b_norm": {
-      "median": 0.8000000000000005,
-      "max": 0.8000000000000005
+      "median": 0.7999999999999944,
+      "max": 0.7999999999999944
     },
     "strongly_convex": true,
     "drift_clipped_fraction": 0.0,
-    "fit_residual_median": 5.511568840295523e-16
+    "fit_residual_median": 9.175043065394707e-15
   },
   "warp": {
     "metric": {
@@ -32,37 +32,37 @@
       ],
       "dx_m": 83.33333333333333,
       "speed_mps": {
-        "min": 0.6999999999999995,
-        "median": 0.6999999999999995,
-        "max": 0.6999999999999995
+        "min": 0.699999999999995,
+        "median": 0.699999999999995,
+        "max": 0.699999999999995
       },
       "wind_ratio_b_norm": {
-        "median": 0.8000000000000005,
-        "max": 0.8000000000000005
+        "median": 0.7999999999999944,
+        "max": 0.7999999999999944
       },
       "strongly_convex": true,
       "drift_clipped_fraction": 0.0,
-      "fit_residual_median": 5.511568840295523e-16
+      "fit_residual_median": 9.175043065394707e-15
     },
-    "time_scale_s": 4264.066734261918,
+    "time_scale_s": 7257.564983092033,
     "reachable_cells": 2304,
-    "median_abs_asymmetry": 0.5769047906821809,
-    "max_abs_asymmetry": 0.7085038272112529,
+    "median_abs_asymmetry": 0.6945537846620125,
+    "max_abs_asymmetry": 0.7999999999999945,
     "n_features_per_drone": 6
   },
   "arrival_time_fits": [
     {
       "name": "finsler",
-      "calibration_factor": 0.35397402909060144,
-      "r2_through_origin": 0.3415731709347145,
-      "spearman_rho": 0.8996755775246121,
+      "calibration_factor": 0.27153326104107134,
+      "r2_through_origin": 0.2747078166479444,
+      "spearman_rho": 0.9052202042559025,
       "n_cells": 2295
     },
     {
       "name": "isotropic",
-      "calibration_factor": 0.3739772967150457,
-      "r2_through_origin": 0.40995464790492764,
-      "spearman_rho": 0.7283512866672316,
+      "calibration_factor": 0.4395475602652721,
+      "r2_through_origin": 0.12633828627897625,
+      "spearman_rho": 0.5705267198366767,
       "n_cells": 2295
     }
   ],
@@ -70,21 +70,21 @@
     {
       "wind_response": "clipped",
       "wind_coeff": 0.2,
-      "b_norm_a": 0.09401935048464809,
-      "metric_fit_residual": 0.028958399929539854,
+      "b_norm_a": 0.09545599938176223,
+      "metric_fit_residual": 0.027417097722431397,
       "drift_clipped_fraction": 0.0,
       "subunit_wind": true,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.4067090164611911,
-        "r2_through_origin": 0.99348081616371,
-        "spearman_rho": 0.9970192646316711,
+        "calibration_factor": 0.40718672550461477,
+        "r2_through_origin": 0.9930323326993077,
+        "spearman_rho": 0.9967038050471697,
         "n_cells": 2295
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.39028745706314816,
-        "r2_through_origin": 0.9874013228946794,
+        "calibration_factor": 0.39134469530933935,
+        "r2_through_origin": 0.9874013228946793,
         "spearman_rho": 0.9977051814875466,
         "n_cells": 2295
       }
@@ -92,21 +92,21 @@
     {
       "wind_response": "clipped",
       "wind_coeff": 0.4,
-      "b_norm_a": 0.17742739059365545,
-      "metric_fit_residual": 0.054285719405726185,
+      "b_norm_a": 0.1811199273234963,
+      "metric_fit_residual": 0.04877530998537351,
       "drift_clipped_fraction": 0.0,
       "subunit_wind": true,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.4252631049583046,
-        "r2_through_origin": 0.9788145679520773,
-        "spearman_rho": 0.9885112833793085,
+        "calibration_factor": 0.42648926896713896,
+        "r2_through_origin": 0.9750667801857427,
+        "spearman_rho": 0.9864546711296761,
         "n_cells": 2295
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.39705503562672523,
-        "r2_through_origin": 0.9724115241217608,
+        "calibration_factor": 0.40095544422144075,
+        "r2_through_origin": 0.9724115241217609,
         "spearman_rho": 0.9924619806924126,
         "n_cells": 2295
       }
@@ -114,21 +114,21 @@
     {
       "wind_response": "clipped",
       "wind_coeff": 0.8,
-      "b_norm_a": 0.31886653270929927,
-      "metric_fit_residual": 0.09561888854108336,
+      "b_norm_a": 0.3232091111825678,
+      "metric_fit_residual": 0.07797554030158407,
       "drift_clipped_fraction": 0.0,
       "subunit_wind": true,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.45390822342015635,
-        "r2_through_origin": 0.909174991902598,
-        "spearman_rho": 0.9490603413569191,
+        "calibration_factor": 0.4557804784171502,
+        "r2_through_origin": 0.8884854024904891,
+        "spearman_rho": 0.9392177226565941,
         "n_cells": 2295
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.41318957040767246,
-        "r2_through_origin": 0.9313296679240971,
+        "calibration_factor": 0.4264981574604829,
+        "r2_through_origin": 0.931329667924097,
         "spearman_rho": 0.9762839209546766,
         "n_cells": 2295
       }
@@ -136,20 +136,20 @@
     {
       "wind_response": "clipped",
       "wind_coeff": 1.6,
-      "b_norm_a": 0.5301922304509157,
-      "metric_fit_residual": 0.15154029862677024,
+      "b_norm_a": 0.5148652573675216,
+      "metric_fit_residual": 0.10489594185465569,
       "drift_clipped_fraction": 0.0,
       "subunit_wind": true,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.4873636787138789,
-        "r2_through_origin": 0.5803241415348204,
-        "spearman_rho": 0.8320148024148634,
+        "calibration_factor": 0.4882319346159804,
+        "r2_through_origin": 0.5359414398895037,
+        "spearman_rho": 0.8151802352457646,
         "n_cells": 2295
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.45756997688175854,
+        "calibration_factor": 0.4979364173380866,
         "r2_through_origin": 0.8547217735068469,
         "spearman_rho": 0.9444366385806728,
         "n_cells": 2295
@@ -158,21 +158,21 @@
     {
       "wind_response": "clipped",
       "wind_coeff": 3.0,
-      "b_norm_a": 0.7675922373491345,
-      "metric_fit_residual": 0.20395484665099384,
+      "b_norm_a": 0.6881392184495895,
+      "metric_fit_residual": 0.11392569518522061,
       "drift_clipped_fraction": 0.0,
       "subunit_wind": true,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.49970376546387485,
-        "r2_through_origin": -0.15843758896004312,
-        "spearman_rho": 0.7499676296025177,
+        "calibration_factor": 0.4917529765036045,
+        "r2_through_origin": -0.19503640788911714,
+        "spearman_rho": 0.7127410372197029,
         "n_cells": 2295
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.545597709481111,
-        "r2_through_origin": 0.7503560224959309,
+        "calibration_factor": 0.6420939478581831,
+        "r2_through_origin": 0.7503560224959306,
         "spearman_rho": 0.8975567425488037,
         "n_cells": 2295
       }
@@ -180,134 +180,134 @@
     {
       "wind_response": "elliptical",
       "wind_coeff": 0.2,
-      "b_norm_a": 0.1999999999999999,
-      "metric_fit_residual": 5.186206775663095e-16,
+      "b_norm_a": 0.2000000000000001,
+      "metric_fit_residual": 7.627967032065963e-15,
       "drift_clipped_fraction": 0.0,
       "subunit_wind": true,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.40235082287098967,
-        "r2_through_origin": 0.972482901543128,
-        "spearman_rho": 0.9850196534118557,
+        "calibration_factor": 0.4006413683437397,
+        "r2_through_origin": 0.9706748415423886,
+        "spearman_rho": 0.983714407315864,
         "n_cells": 2295
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.3734577875290691,
-        "r2_through_origin": 0.9673902391418852,
-        "spearman_rho": 0.9908212558521843,
+        "calibration_factor": 0.375401676729815,
+        "r2_through_origin": 0.9655023530961588,
+        "spearman_rho": 0.9900502214222601,
         "n_cells": 2295
       }
     },
     {
       "wind_response": "elliptical",
       "wind_coeff": 0.4,
-      "b_norm_a": 0.4,
-      "metric_fit_residual": 4.704910689187023e-16,
+      "b_norm_a": 0.39999999999999913,
+      "metric_fit_residual": 7.168819054767357e-15,
       "drift_clipped_fraction": 0.0,
       "subunit_wind": true,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.4040787767076508,
-        "r2_through_origin": 0.8493386031882979,
-        "spearman_rho": 0.9208936188344449,
+        "calibration_factor": 0.39432594138751126,
+        "r2_through_origin": 0.8236149881503481,
+        "spearman_rho": 0.9114532083328671,
         "n_cells": 2295
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.3669003272208409,
-        "r2_through_origin": 0.8873081637201172,
-        "spearman_rho": 0.9582194026664672,
+        "calibration_factor": 0.3744688731936734,
+        "r2_through_origin": 0.8753966980127745,
+        "spearman_rho": 0.9538376093058363,
         "n_cells": 2295
       }
     },
     {
       "wind_response": "elliptical",
       "wind_coeff": 0.8,
-      "b_norm_a": 0.8000000000000005,
-      "metric_fit_residual": 5.511568840295523e-16,
+      "b_norm_a": 0.7999999999999944,
+      "metric_fit_residual": 9.175043065394707e-15,
       "drift_clipped_fraction": 0.0,
       "subunit_wind": true,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.35397402909060144,
-        "r2_through_origin": 0.3415731709347145,
-        "spearman_rho": 0.8996755775246121,
+        "calibration_factor": 0.27153326104107134,
+        "r2_through_origin": 0.2747078166479444,
+        "spearman_rho": 0.9052202042559025,
         "n_cells": 2295
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.3739772967150457,
-        "r2_through_origin": 0.40995464790492764,
-        "spearman_rho": 0.7283512866672316,
+        "calibration_factor": 0.4395475602652721,
+        "r2_through_origin": 0.12633828627897625,
+        "spearman_rho": 0.5705267198366767,
         "n_cells": 2295
       }
     },
     {
       "wind_response": "elliptical",
       "wind_coeff": 1.6,
-      "b_norm_a": 0.95,
-      "metric_fit_residual": 0.09372808854127775,
+      "b_norm_a": 0.9499999999999998,
+      "metric_fit_residual": 0.1970492946614479,
       "drift_clipped_fraction": 1.0,
       "subunit_wind": false,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.6527392419059777,
-        "r2_through_origin": 0.48514927382930495,
-        "spearman_rho": 0.8575738798132486,
-        "n_cells": 1653
+        "calibration_factor": 0.9120924823696867,
+        "r2_through_origin": 0.6836188147211175,
+        "spearman_rho": 0.8729745276246977,
+        "n_cells": 1151
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.3748907753545433,
-        "r2_through_origin": -0.10095331833515897,
-        "spearman_rho": 0.5729994649804548,
-        "n_cells": 1653
+        "calibration_factor": 0.5424562345111341,
+        "r2_through_origin": 0.35771491363811814,
+        "spearman_rho": 0.6919775095060623,
+        "n_cells": 1151
       }
     },
     {
       "wind_response": "elliptical",
       "wind_coeff": 3.0,
-      "b_norm_a": 0.95,
-      "metric_fit_residual": 0.18597570034206806,
+      "b_norm_a": 0.9500000000000001,
+      "metric_fit_residual": 0.14318028791160678,
       "drift_clipped_fraction": 1.0,
       "subunit_wind": false,
       "finsler": {
         "name": "finsler",
-        "calibration_factor": 0.8186476079137001,
-        "r2_through_origin": 0.41715864274625325,
-        "spearman_rho": 0.8382631972759427,
-        "n_cells": 1653
+        "calibration_factor": 0.9919477937457628,
+        "r2_through_origin": 0.644053342146222,
+        "spearman_rho": 0.8949348530230533,
+        "n_cells": 1168
       },
       "isotropic": {
         "name": "isotropic",
-        "calibration_factor": 0.46470035930403364,
-        "r2_through_origin": -0.1406982679151867,
-        "spearman_rho": 0.5453153145690054,
-        "n_cells": 1653
+        "calibration_factor": 0.5933275085606868,
+        "r2_through_origin": 0.32380347741809357,
+        "spearman_rho": 0.7303968711829615,
+        "n_cells": 1168
       }
     }
   ],
   "positive_definiteness": {
     "n_points": 16,
     "directed_distance_is_symmetric": false,
-    "max_relative_asymmetry": 1.4170076544225056,
+    "max_relative_asymmetry": 1.599999999999989,
     "substituted": {
       "mean": {
-        "min_eigenvalue": -0.004534363859537075,
-        "is_psd": false
+        "min_eigenvalue": 0.0009513020154364202,
+        "is_psd": true
       },
       "min": {
-        "min_eigenvalue": -0.09269674054768677,
+        "min_eigenvalue": -0.25040156093378085,
         "is_psd": false
       },
       "max": {
-        "min_eigenvalue": 0.006928878259305766,
+        "min_eigenvalue": 0.02387235422478173,
         "is_psd": true
       }
     },
     "warped": {
-      "min_eigenvalue": 0.04182877270802341,
+      "min_eigenvalue": 0.025288564159437324,
       "is_psd": true,
       "is_symmetric": true
     }
@@ -342,79 +342,79 @@
         },
         "finsler": {
           "cvar_by_seed": [
-            8.559829059829058,
-            8.587606837606836,
-            8.893696581196581,
-            8.830128205128204,
-            9.096153846153845
+            9.365918803418802,
+            8.508547008547009,
+            8.553952991452991,
+            9.273504273504274,
+            7.622863247863247
           ],
-          "mean": 8.793482905982906,
-          "std": 0.1999872156042554,
-          "best": 8.559829059829058
+          "mean": 8.664957264957266,
+          "std": 0.6299877137728259,
+          "best": 7.622863247863247
         }
       },
       "paired_vs_finsler": {
         "wind": {
-          "mean_difference": 0.19177350427350354,
-          "finsler_wins": 2,
+          "mean_difference": 0.06324786324786338,
+          "finsler_wins": 3,
           "n_seeds": 5
         },
         "sr": {
-          "mean_difference": 0.7353632478632475,
+          "mean_difference": 0.6068376068376073,
           "finsler_wins": 0,
           "n_seeds": 5
         }
       }
     },
     "elliptical": {
-      "no_drop_cvar": 8.362713675213675,
+      "no_drop_cvar": 6.7013888888888875,
       "per_frame": {
         "wind": {
           "cvar_by_seed": [
-            6.903311965811965,
-            6.37232905982906,
-            5.803418803418802,
-            7.0122863247863245,
-            7.042200854700853
+            5.271367521367521,
+            4.731303418803419,
+            3.9449786324786325,
+            4.797542735042734,
+            4.855769230769231
           ],
-          "mean": 6.626709401709401,
-          "std": 0.477562238280076,
-          "best": 5.803418803418802
+          "mean": 4.720192307692307,
+          "std": 0.4311004536951067,
+          "best": 3.9449786324786325
         },
         "sr": {
           "cvar_by_seed": [
-            6.370726495726497,
-            4.960470085470084,
-            5.626602564102564,
-            6.749465811965811,
-            6.490384615384615
+            4.836538461538462,
+            4.6655982905982905,
+            4.725961538461538,
+            4.670405982905983,
+            4.97008547008547
           ],
-          "mean": 6.039529914529913,
-          "std": 0.6560257962258464,
-          "best": 4.960470085470084
+          "mean": 4.773717948717949,
+          "std": 0.11588832361500392,
+          "best": 4.6655982905982905
         },
         "finsler": {
           "cvar_by_seed": [
-            7.011217948717948,
-            7.49145299145299,
-            7.32318376068376,
-            4.960470085470084,
-            7.042200854700853
+            4.65224358974359,
+            4.647435897435897,
+            4.725961538461538,
+            5.00534188034188,
+            5.827457264957265
           ],
-          "mean": 6.765705128205127,
-          "std": 0.9201187290783985,
-          "best": 4.960470085470084
+          "mean": 4.971688034188034,
+          "std": 0.447445922915625,
+          "best": 4.647435897435897
         }
       },
       "paired_vs_finsler": {
         "wind": {
-          "mean_difference": 0.13899572649572606,
-          "finsler_wins": 1,
+          "mean_difference": 0.2514957264957265,
+          "finsler_wins": 2,
           "n_seeds": 5
         },
         "sr": {
-          "mean_difference": 0.7261752136752129,
-          "finsler_wins": 1,
+          "mean_difference": 0.19797008547008535,
+          "finsler_wins": 2,
           "n_seeds": 5
         }
       }

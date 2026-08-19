@@ -51,6 +51,7 @@ import heapq
 from dataclasses import dataclass, field as _dc_field
 
 import numpy as np
+from scipy.spatial import cKDTree
 from sklearn.gaussian_process.kernels import Hyperparameter, Kernel, Matern
 
 _EPS = 1e-12
@@ -869,6 +870,119 @@ class FinslerWarp:
 
 
 # ---------------------------------------------------------------------------
+# A front-free search map
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class FinslerSearchMap:
+    """Invert Finsler front coordinates without forecasting a future boundary.
+
+    The SR search map needs a Monte-Carlo rollout to construct its outer
+    boundary.  This map instead uses the deterministic arrival field already
+    carried by :class:`FinslerWarp`.  A point is represented by
+
+    ``(s, tau)``
+        ``s`` is the periodic label of the current-perimeter source reached by
+        its geodesic; ``tau`` is normalised forward arrival time in an
+        actionable window.  The optimiser's third coordinate is the long-axis
+        angle relative to the local arrival-time normal.
+
+    Inversion is a nearest-neighbour query in ``[cos(2πs), sin(2πs), tau]``.
+    The periodic embedding avoids a seam at ``s=0``.  No simulated future fire
+    state, extracted outer boundary, or Laplace-smoothed strip is involved.
+    """
+
+    warp: FinslerWarp
+    min_time_s: float
+    max_time_s: float
+    mask: np.ndarray = _dc_field(init=False)
+    cells: np.ndarray = _dc_field(init=False)
+    coordinates: np.ndarray = _dc_field(init=False)
+    tree: cKDTree = _dc_field(init=False)
+
+    def __post_init__(self) -> None:
+        self.min_time_s = float(self.min_time_s)
+        self.max_time_s = float(self.max_time_s)
+        if self.min_time_s < 0.0 or self.max_time_s <= self.min_time_s:
+            raise ValueError("require 0 <= min_time_s < max_time_s")
+
+        time = np.asarray(self.warp.forward.time_s, dtype=float)
+        self.mask = (
+            self.warp.valid
+            & self.warp.field.burnable
+            & np.isfinite(time)
+            & (time >= self.min_time_s)
+            & (time <= self.max_time_s)
+        )
+        self.cells = np.argwhere(self.mask).astype(float)
+        if self.cells.size == 0:
+            raise ValueError(
+                "Finsler search window contains no reachable cells; "
+                "increase max_time_s or reduce min_time_s"
+            )
+
+        ix = self.cells[:, 0].astype(int)
+        iy = self.cells[:, 1].astype(int)
+        source_angle = np.arctan2(self.warp.sin_s[ix, iy], self.warp.cos_s[ix, iy])
+        source_s = np.mod(source_angle, 2.0 * np.pi) / (2.0 * np.pi)
+        tau = (time[ix, iy] - self.min_time_s) / (self.max_time_s - self.min_time_s)
+        # The factor 2 gives front label and arrival time comparable influence
+        # in nearest-neighbour inversion because the unit circle has diameter 2.
+        self.coordinates = np.column_stack(
+            [np.cos(2.0 * np.pi * source_s), np.sin(2.0 * np.pi * source_s), 2.0 * tau]
+        )
+        self.tree = cKDTree(self.coordinates)
+
+    def lookup(self, s: float, tau: float) -> tuple[np.ndarray, float]:
+        """Return ``(xy, normal_angle)`` nearest to front coordinates."""
+        s = float(np.mod(s, 1.0))
+        tau = float(np.clip(tau, 0.0, 1.0))
+        query = [np.cos(2.0 * np.pi * s), np.sin(2.0 * np.pi * s), 2.0 * tau]
+        _, index = self.tree.query(query, k=1)
+        xy = self.cells[int(index)]
+        ix, iy = xy.astype(int)
+        normal = self.warp.normal[ix, iy]
+        normal_angle = float(np.arctan2(normal[1], normal[0]))
+        return xy.copy(), normal_angle
+
+    def decode(self, theta: np.ndarray, n_drones: int) -> np.ndarray:
+        """Decode repeating ``[s, tau, delta]`` blocks to ``[x, y, phi]``.
+
+        ``delta`` spans only ``π`` because a retardant rectangle has no head or
+        tail.  ``phi`` follows the convention used by
+        ``CAFireModel.apply_retardant_cartesian``.
+        """
+        theta = np.asarray(theta, dtype=float).ravel()
+        if theta.size != 3 * int(n_drones):
+            raise ValueError(f"expected {3 * int(n_drones)} parameters; got {theta.size}")
+
+        params = []
+        for drone in range(int(n_drones)):
+            s = theta[3 * drone]
+            tau = theta[3 * drone + 1]
+            delta = theta[3 * drone + 2] * np.pi
+            xy, normal_angle = self.lookup(s, tau)
+            long_axis_angle = normal_angle + delta
+            phi = np.mod(0.5 * np.pi - long_axis_angle, 2.0 * np.pi)
+            params.append((float(xy[0]), float(xy[1]), float(phi)))
+
+        out = np.asarray(params, dtype=float)
+        order = np.lexsort((out[:, 2], out[:, 1], out[:, 0]))
+        return out[order]
+
+    def describe(self) -> dict:
+        time = self.warp.forward.time_s[self.mask]
+        return {
+            "setup_rollout_steps": 0,
+            "candidate_cells": int(self.cells.shape[0]),
+            "min_time_s": self.min_time_s,
+            "max_time_s": self.max_time_s,
+            "actual_time_range_s": [float(time.min()), float(time.max())],
+        }
+
+
+# ---------------------------------------------------------------------------
 # A stationary kernel on the warped space
 # ---------------------------------------------------------------------------
 
@@ -1046,6 +1160,7 @@ __all__ = [
     "RandersField",
     "ArrivalField",
     "FinslerWarp",
+    "FinslerSearchMap",
     "TiedFinslerMatern",
     "uniform_directions",
     "fit_randers_profile",

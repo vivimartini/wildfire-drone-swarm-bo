@@ -19,6 +19,7 @@ jobs:
       - run: python -m pytest -q
       - run: MPLBACKEND=Agg python -m fire_model.demo --quick --output-dir artifacts/reproduction
       - run: MPLBACKEND=Agg python -m fire_model.finsler_validation --quick --output-dir artifacts/finsler
+      - run: MPLBACKEND=Agg python -m fire_model.cold_start --quick --output-dir artifacts/cold_start
       - uses: actions/upload-artifact@v4
         with:
           name: reproduction-output

@@ -14,3 +14,4 @@ fi
 MPLBACKEND=Agg .venv/bin/python -m pytest -q
 MPLBACKEND=Agg .venv/bin/python -m fire_model.demo --quick --output-dir artifacts/reproduction
 MPLBACKEND=Agg .venv/bin/python -m fire_model.finsler_validation --quick --output-dir artifacts/finsler
+MPLBACKEND=Agg .venv/bin/python -m fire_model.cold_start --quick --output-dir artifacts/cold_start

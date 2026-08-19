@@ -1,22 +1,25 @@
 # Wildfire Drone Swarm BO
 
-**A CVaR-targeting multi-fidelity BO planner reduced worst-tail asset loss by
-5.7% against no intervention in the reproducible synthetic smoke test.**
+**Under the smallest equal simulation budget, a front-free Randers–Finsler
+planner improved worst-tail loss reduction by 4.30 percentage points over a
+simulation-derived fire-front planner across 36 paired runs. The advantage
+disappeared as the budget increased.**
 
 The planner combines a stochastic cellular-automata fire simulator,
-fire-front-relative interventions and an anisotropic wind-aligned Matérn
-surrogate. The headline result is independently evaluated on 64 Monte-Carlo
-realisations; it is a software demonstration, not a claim of operational
-wildfire effectiveness.
+CVaR-targeting Bayesian optimisation, fire-front-relative interventions and
+physics-derived arrival-time geometry. The original reproducible MFBO smoke test
+still reduces `CVaR_0.90` asset loss by 5.7% against no intervention. These are
+software results on synthetic scenarios, not claims of operational wildfire
+effectiveness.
 
-![Independent validation of the CVaR plan](artifacts/reproduction/cvar_mfbo_reproduction.png)
+![Equal-budget cold-start validation](artifacts/cold_start/cold_start_budget.png)
 
 ---
 
 ## What this repo does
 
 1. **Simulate** wildfire spread on a grid with fuel, wind, slope, and retardant decay.
-2. **Parameterise** candidate drops either in Cartesian coordinates `(x, y, φ)` or in an SR fire-front frame `(s, r, δ)` between successive fire boundaries.
+2. **Parameterise** candidate drops in Cartesian, simulated-front SR, or front-free Finsler arrival-time coordinates.
 3. **Optimise tail risk** using empirical `CVaR_0.90` of per-realisation asset loss rather than averaging the ensemble before optimisation.
 4. **Screen cheaply** with short-horizon, low-simulation rollouts before higher-fidelity evaluations in an autoregressive co-kriging BO loop.
 5. **Evaluate** on synthetic stress-test scenarios and a Victoria-style semi-realistic environment.
@@ -29,7 +32,7 @@ wildfire effectiveness.
 |------|---------|
 | Fire model | Grid CA with wind, fuel, value maps, time-varying ROS, retardant half-life |
 | Drop geometry | Oriented rectangular drops with optional “avoid burning cells” |
-| Coordinates | Cartesian BO and fire-front-relative `(s, r, δ)` plans |
+| Coordinates | Cartesian, simulated-front SR, and front-free Finsler arrival-time plans |
 | GP kernel | Anisotropic Matérn over positions/orientations rotated into the observed mean-wind frame |
 | Fire-front geometry | Randers–Finsler metric fitted to the CA's own spread law; arrival time as a Finsler distance |
 | Optimisation | CVaR objective, expected improvement, heuristic warm-starts, multi-fidelity co-kriging |
@@ -89,11 +92,13 @@ fire_model/                      Core simulation + optimisation library
   bo_sr.py                       CVaR, wind-aligned SR BO and multi-fidelity BO
   finsler.py                     Randers metric, Finsler arrival time, kernel warp
   finsler_validation.py          Validates the geometry against the simulator
+  cold_start.py                  Equal-budget front-free vs SR benchmark
   demo.py                        Deterministic command-line reproduction
 
 tests/                           CA, CVaR, wind-frame and Finsler regression tests
 artifacts/reproduction/          Checked-in output from the quick reproduction
 artifacts/finsler/               Checked-in Finsler geometry validation
+artifacts/cold_start/             Checked-in cold-start finding and raw paired data
 
 notebooks/
   experiments/                   End-to-end BO / MFBO and final experiment runs
@@ -166,27 +171,52 @@ field = randers_from_env(env)                    # fit the metric to the CA's sp
 warp  = FinslerWarp.from_firestate(env, state)   # arrival time -> kernel-safe features
 ```
 
-and the optimiser takes it as a kernel frame alongside the existing two:
+The fully front-free planner must select both the Finsler search map and kernel:
 
 ```python
-optimizer.run_bayes_opt(..., kernel_frame="finsler")
+optimizer.run_bayes_opt(
+    ...,
+    search_frame="finsler",      # no Monte-Carlo future boundary
+    kernel_frame="finsler",
+    orientation_period_pi=True,  # quotient the rectangle's half-turn symmetry
+)
 ```
 
-**The metric is derived, not chosen.** The CA's directional rate law is projected
-onto the Randers family, so the surrogate's anisotropy follows from the spread
-parameters rather than from a hand-built frame. With
-`FireEnv.wind_response="elliptical"` — Richards' law, opt-in, default unchanged —
-the projection is exact to machine precision: the CA's spread law *is* a Randers
-indicatrix. Containment lines are then placed against where the front will be,
-not against grid `x` and `y`.
+Setting only `kernel_frame="finsler"` retains the SR search map and therefore
+still pays for a simulated future front; that is useful as a feature ablation,
+but it is not the front-free method.
+
+**The metric is derived, not chosen.** The CA's directional rate law is
+projected onto the Randers family, so the surrogate's anisotropy follows from
+the spread parameters rather than from a hand-built frame. Containment lines are
+then placed against where the front will be, not against grid `x` and `y`.
+
+The projection targets the *indicatrix* radial function
+
+```
+σ(u) = W·u + √(s² − |W|² + (W·u)²)          # circle of radius s centred on the drift W
+```
+
+and **not** `s + W·u`. A Randers metric is `F(v) = √(a(v,v)) + b·v`, so its
+radial function is `1/(√(a(u,u)) + b·u)` — the *reciprocal* of a linear form.
+The two agree only to first order in `|W|/s`; at `|W|/s = 0.8` the linear
+version overstates the flank rate by 67%. Squaring the target rearranges to
+`σ² = 2σ(W·u) + q` with `q = s² − |W|²`, which is linear in `(W, q)`, so the fit
+is a closed-form 3×3 least-squares solve per cell and strong convexity is just
+`q > 0`.
+
+With `FireEnv.wind_response="elliptical"` — Richards' law, opt-in, default
+unchanged — and sub-critical wind (`wind_coeff·|w| < 1`), the fit residual is
+**9e−15**: the CA's spread law *is* a Randers indicatrix, so the metric is a
+restatement of the simulator rather than an approximation of it.
 
 **The catch, and the fix.** Finsler distance is not symmetric — travelling
-upwind is slower than downwind, so `d_F(x, y) ≠ d_F(y, x)`. It therefore cannot
-be substituted for the distance in a Matérn kernel: a covariance function must
-be symmetric and positive definite, and a directed distance is neither.
-Symmetrising it (mean or min of the two directions) restores symmetry, still
-guarantees nothing about positive definiteness, and discards precisely the
-asymmetry that made the geometry worth having.
+upwind is slower than downwind, so `d_F(x, y) ≠ d_F(y, x)`, by up to 160% here.
+It therefore cannot be substituted for the distance in a Matérn kernel: a
+covariance function must be symmetric and positive definite, and a directed
+distance is neither. Symmetrising it (mean or min of the two directions)
+restores symmetry, still guarantees nothing about positive definiteness, and
+discards precisely the asymmetry that made the geometry worth having.
 
 So the geometry is **warped rather than substituted**. Each drop is mapped
 through a fixed, deterministic function of the arrival-time field, and an
@@ -208,51 +238,85 @@ against the simulator rather than assuming it, writing
 ![Finsler geometry validation](artifacts/finsler/finsler_validation.png)
 
 - Geodesic arrival times track simulated first-ignition times with Spearman
-  `ρ = 0.90`, against `ρ = 0.73` for an isotropic ablation that keeps the same
-  mean speed and zeroes the drift. The gap widens with anisotropy — at
-  `‖b‖_a = 0.95` it is `0.86` against `0.57` — and vanishes as `‖b‖_a → 0`, as it
-  must.
-- On the stricter test of a single global calibration constant, the isotropic
-  ablation actually scores *better* (`R² = 0.41` against `0.34`), and the
-  constant itself is ≈ 0.35 rather than 1. The stochastic percolation front
-  outruns the mean-field rate the metric describes, by a factor that depends on
-  the local hazard, so no one constant holds across a field with a wide speed
-  range. Ordering is what a monotone warp coordinate actually needs; the
-  calibration result is reported rather than hidden.
+  `ρ = 0.91`, against `ρ = 0.57` for an isotropic ablation that keeps the same
+  mean speed and zeroes the drift. The gap opens up with anisotropy and closes
+  as `‖b‖_a → 0`, as it must: at `‖b‖_a = 0.2` the two are indistinguishable
+  (`0.98` vs `0.99`).
+- On the stricter test of a single global calibration constant the Randers
+  metric also wins (`R² = 0.28` against `0.13`), but both are low in absolute
+  terms and the constant is `≈ 0.27`, not 1. The stochastic percolation front
+  outruns the mean-field rate the metric describes, because the front advances
+  by the earliest of many competing ignition attempts, and that speedup depends
+  on the local hazard. Ordering is what a monotone warp coordinate needs;
+  calibration is the stricter test, and it is reported rather than hidden.
 - Under the default clipped spread law the isotropic metric beats the Randers
-  one at every wind strength tested — the clip is not an ellipse, and the fit
-  says so (`residual` 3% → 20%). The geometry is only faithful where the
-  simulator's own law is elliptical.
-- Substituting the directed distance into a Matérn gives a non-symmetric matrix;
-  the mean- and min-symmetrisations give **negative** minimum eigenvalues on
-  this fire (`−4.5e−3`, `−9.3e−2`). The warp's Gram matrix is positive
-  semi-definite.
+  one at every wind strength tested — that law is not an ellipse, and the fit
+  says so (residual 2.7% → 11.4%). The geometry is faithful only where the
+  simulator's own law is elliptical and the wind is sub-critical.
+- Substituting the directed distance into a Matérn gives a non-symmetric matrix.
+  Min-symmetrisation gives a minimum eigenvalue of **−0.25**; mean-symmetrisation
+  happens to stay PSD on this particular point set, which is the point — nothing
+  guarantees it either way. The warp's Gram matrix is positive semi-definite by
+  construction.
 
-**Effect on the optimiser.** Five paired BO seeds per frame, every selected
-plan re-scored on 128 independent realisations (`--frames`, lower is better):
+**Unpriced feature-only comparison.** Five paired BO seeds per frame, every
+selected plan re-scored on 128 independent realisations (`--frames`, lower is
+better). All three arms below still use the SR search map, so its forecast-front
+cost is omitted:
 
 | Frame | `CVaR₀.₉₀`, elliptical | `CVaR₀.₉₀`, clipped |
 |-------|-----------------------|---------------------|
-| no drop | 8.36 | 10.39 |
-| `wind` (default) | 6.63 ± 0.48 | 8.60 ± 0.41 |
-| `finsler` | 6.77 ± 0.92 | 8.79 ± 0.20 |
-| `sr` | **6.04 ± 0.66** | **8.06 ± 0.38** |
+| no drop | 6.70 | 10.39 |
+| `wind` (default) | **4.72 ± 0.43** | **8.60 ± 0.41** |
+| `sr` | 4.77 ± 0.12 | **8.06 ± 0.38** |
+| `finsler` | 4.97 ± 0.45 | 8.66 ± 0.63 |
 
 **This does not show the Finsler frame optimising better.** It is level with the
-wind-aligned default (paired wins: 1 of 5 elliptical, 2 of 5 clipped) and behind
-the SR frame in both spread laws. On a 32×32-cell variant of the same scenario —
-identical in every other setting — the ranking against `wind` reversed
-completely, 10 paired wins out of 10 for `finsler`. That reversal is itself the
-finding: at five seeds these differences are scenario-dependent noise, and no
-claim of an optimisation gain is supported.
+wind-aligned default (paired wins 2/5 and 3/5) and behind `sr` under the clipped
+law. At five seeds, with per-seed spreads of this size, none of these gaps is
+established. No optimisation gain is claimed, and the frame is not the default.
 
-A plausible reason `sr` stays ahead: its coordinates are built from *simulated*
+A plausible reason `sr` holds up: its coordinates are built from *simulated*
 fire boundaries, so they already encode the stochastic front's real shape,
 including the percolation speedup the mean-field metric misses. What the Finsler
 frame offers instead is that it is derived from the spread parameters rather
 than requiring a Monte-Carlo front to exist first, that it needs no boundary
 extraction or strip smoothing, and that it carries the upwind/downwind asymmetry
 explicitly. See [DECISIONS.md](DECISIONS.md).
+
+### Equal-budget cold start: where Finsler genuinely helps
+
+`python -m fire_model.cold_start` corrects that comparison. The native Finsler
+arm builds its actionable region directly from deterministic arrival time and
+consumes **zero rollout steps** before BO. SR first spends
+`n_sims × ceil(horizon / dt)` steps constructing its future boundary — exactly
+one candidate-evaluation equivalent here. Both arms use the same corrected
+π-periodic orientation parameterisation, paired planning seeds, and independent
+paired validation ensembles.
+
+Across 3 asset/wind geometries × 12 planning seeds:
+
+- At a total budget of **3 evaluation-equivalents**, native Finsler improves
+  independently validated `CVaR₀.₉₀` by **12.73%** over no intervention, versus
+  **8.43%** for SR: a **+4.30 percentage-point advantage**, 95% interval
+  `[+1.53, +7.06]`, with Finsler winning **25/36** pairs (exact sign-test
+  `p=0.0288`). Every scenario-level mean is positive.
+- At budget 4 the advantage remains **+2.98 points**; at budgets 6 and 8 it is
+  positive but uncertain.
+- At budget 12, SR has enough data to catch up and leads by **1.63 points**
+  (interval crosses zero). The result is a crossover, not a universal win:
+  the physics-derived prior is most valuable exactly when data are scarce.
+- If SR's setup is incorrectly treated as free at budget 3, the measured gap
+  shrinks from 4.30 to 2.49 points. Pricing the baseline explains a material
+  part of the original ranking error, but not all of it.
+
+![Equal-budget cold-start comparison](artifacts/cold_start/cold_start_budget.png)
+
+This is the project’s strongest optimisation finding: a physics-derived
+representation buys sample efficiency during early detection, while the
+simulation-derived representation catches up once enough rollouts are
+available. Full raw paired results and every selected plan are checked into
+[`artifacts/cold_start/cold_start_summary.json`](artifacts/cold_start/cold_start_summary.json).
 
 ---
 
